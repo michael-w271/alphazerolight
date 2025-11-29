@@ -1,0 +1,162 @@
+{
+  "project_name": "alpha-zero-light",
+  "github_repo": "https://github.com/mbenz227/alphazerolight",
+  "background": {
+    "motivation": "The AlphaZero algorithm has demonstrated an extraordinary ability to master games like Chess, Go, and Shogi through reinforcement learning (RL) and Monte Carlo Tree Search (MCTS). However, implementing this on modern hardware (GPUs) with a well-documented, structured approach remains a challenge. The aim of this project is to build a compact, scalable, and fully documented AlphaZero-style engine, starting from a simple game (Tic-Tac-Toe) and progressing to more complex games like Chess.",
+    "vision": "This project aims to showcase a deep understanding of reinforcement learning, neural networks, Monte Carlo Tree Search, and the overall design and deployment of a production-quality machine learning system. The goal is to build an efficient, scalable RL agent that starts with simple toy problems and grows into a full-fledged system capable of playing chess at a competitive level. Through continuous learning and refinement, the project will serve as a personal learning journey while also serving as a valuable showcase for both technical and software engineering skills.",
+    "goals": [
+      "Start small with Tic-Tac-Toe, gradually scale the complexity of the game to Connect4, and ultimately build a chess-playing agent.",
+      "Provide a clean, modular codebase with detailed documentation that explains each component of the system from game representation to training and evaluation.",
+      "Implement a scalable and efficient MCTS system with an embedded neural network for policy evaluation.",
+      "Showcase the project in a real-time interactive UI using Streamlit, where users can play against the AI and visualize the decision-making process of the agent.",
+      "Ensure comprehensive experiment tracking and model evaluation with MLflow, as well as integration with modern Python tools like Conda and PyTorch."
+    ]
+  },
+  "tech_stack": {
+    "language": "Python 3.10",
+    "ml_framework": "PyTorch (CUDA 12.4)",
+    "tracking": "MLflow",
+    "ui": "Streamlit",
+    "environment_manager": "Conda",
+    "visualization": "Matplotlib, Plotly",
+    "os": "Pop!_OS Linux",
+    "hardware": {
+      "cpu": "Intel i9-14900KF",
+      "gpu": "NVIDIA GeForce RTX 5080 (16GB GDDR7)",
+      "ram": "48GB DDR5-6000",
+      "storage": [
+        "Samsung 990 EVO Plus 1TB (OS + Games)",
+        "Samsung 990 PRO 2TB (ML Projects, Datasets, Code)"
+      ]
+    }
+  },
+  "project_structure": {
+    "root_files": [
+      "README.md",
+      "CHANGELOG.md",
+      "project.json",
+      "requirements.txt",
+      ".gitignore",
+      "docs/architecture_overview.md",
+      "docs/mcts_explained.md",
+      "docs/neural_network_explained.md",
+      "docs/design_decisions.md"
+    ],
+    "src": {
+      "alpha_zero_light": [
+        "game/",
+        "mcts/",
+        "model/",
+        "training/",
+        "evaluation/",
+        "ui/"
+      ]
+    },
+    "scripts": [
+      "run_self_play.py",
+      "run_train.py",
+      "run_evaluate.py",
+      "run_ui.py"
+    ]
+  },
+  "core_features": [
+    "Game Representation: Board, legal moves, and encoded game states.",
+    "Neural Network with policy and value heads to predict the best moves and evaluate the game outcome.",
+    "Monte Carlo Tree Search (MCTS) with PUCT to explore the most promising moves.",
+    "Self-play loop to generate training data, allowing the model to learn by playing against itself.",
+    "Training pipeline for fine-tuning the neural network using self-play data and MLflow for experiment tracking.",
+    "Evaluation scripts for comparing model performance against random or older models.",
+    "Interactive UI using Streamlit, where users can play against the trained AI and visualize decision-making and MCTS data."
+  ],
+  "project_phases": {
+    "v0.1": {
+      "name": "Tic-Tac-Toe AlphaZero",
+      "description": "Start by implementing a very small neural network and basic MCTS for Tic-Tac-Toe. Focus on game representation, basic policy/value evaluation, and the setup for self-play. Full documentation and clear design decisions are required.",
+      "expected_duration_days": 5
+    },
+    "v0.2": {
+      "name": "Connect4 AlphaZero",
+      "description": "Extend the model to support Connect4 with larger board size and more complex move generation. Improve the MCTS algorithm and introduce hyperparameter tuning. Start using MLflow to track experiments.",
+      "expected_duration_days": 7
+    },
+    "v0.3": {
+      "name": "MiniChess (5x5) AlphaZero",
+      "description": "Transition to a simplified 5x5 version of chess to test and refine the neural network and MCTS on a real chessboard. Work on legal move generation for chess and the full game flow.",
+      "expected_duration_days": 7
+    },
+    "v1.0": {
+      "name": "Full Chess AlphaZero-Light",
+      "description": "Implement a full chess engine using a more complex model architecture, such as a residual network. Optimize the MCTS algorithm and implement advanced training techniques.",
+      "expected_duration_days": 14
+    },
+    "v1.1": {
+      "name": "UI + Visualization",
+      "description": "Create an interactive web interface using Streamlit where users can play against the engine, select their move, and view MCTS statistics like node visits and Q-values.",
+      "expected_duration_days": 5
+    },
+    "v1.2": {
+      "name": "Documentation & Polish",
+      "description": "Finish documentation for the entire project, including architecture decisions, challenges faced, and potential improvements. Refactor and optimize the codebase for clarity and efficiency.",
+      "expected_duration_days": 5
+    }
+  },
+  "ml_design": {
+    "input_representation": "Encoded game state for Tic-Tac-Toe (3x3), Connect4 (6x7), and Chess (standard 8x8 board). Neural network inputs are the encoded board state representing each piece's type, color, and position.",
+    "network": {
+      "type": "Small Convolutional Neural Network (CNN) for Tic-Tac-Toe, expanding to a residual CNN for Chess.",
+      "outputs": [
+        "policy: probability distribution over legal moves (flattened move space).",
+        "value: scalar in [-1, 1] representing win/draw/loss."
+      ]
+    },
+    "loss": [
+      "Policy loss: cross-entropy vs improved policy from MCTS.",
+      "Value loss: Mean Squared Error (MSE) between predicted value and game result.",
+      "Regularization: L2 weight decay."
+    ]
+  },
+  "mcts_design": {
+    "algorithm": "PUCT (Predictive Upper Confidence Bound for Trees)",
+    "key_ideas": [
+      "Each tree node stores N (visits), W (total rewards), Q (mean reward), and P (prior probability from the neural network).",
+      "Selection uses UCB1 formula (balancing exploration vs exploitation).",
+      "Leaf node expansion uses the policy output from the neural network to expand the tree.",
+      "Final policy is obtained by selecting the most visited child node in the root after simulations."
+    ]
+  },
+  "mlflow_tracking": {
+    "enabled": true,
+    "tracked_items": [
+      "Training loss and its components.",
+      "Elo-like scores from evaluation games.",
+      "Hyperparameters and model configurations.",
+      "Model checkpoints and weights."
+    ]
+  },
+  "streamlit_ui": {
+    "features": [
+      "Interactive chessboard (click-to-move).",
+      "Ability to choose side (white/black) and engine strength (search depth / simulations).",
+      "Display of engine's top moves and evaluations.",
+      "Toggle to show MCTS stats (node visits, Q-values)."
+    ]
+  },
+  "documentation_style": {
+    "approach": "Every decision should be explained in detail. From design to coding, every aspect of the project should be understandable and follow a logical flow.",
+    "steps_included": [
+      "Goal of the module.",
+      "Design decisions with explanations.",
+      "Mathematical formulations (where applicable).",
+      "Code snippets and walkthroughs.",
+      "Experiment results and visualizations.",
+      "Next steps for improvement or further research."
+    ]
+  },
+  "future_extensions": [
+    "Support additional games like Connect4 or Go to broaden the scope.",
+    "Experiment with different network architectures, such as deeper models or transformer-based approaches.",
+    "Add a basic opening book or endgame tablebases to improve the engine's play strength.",
+    "Integrate the trained models into a lightweight engine without relying on Python (ONNX or TensorRT).",
+    "Implement online play with real-time updates and matchmaking against other AI agents."
+  ]
+}
