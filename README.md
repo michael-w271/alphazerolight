@@ -9,8 +9,15 @@ A compact, scalable implementation of the AlphaZero algorithm, starting from Tic
 - Interactive UI with Streamlit.
 
 ## Setup
-1. Install dependencies:
+1. Activate the virtual environment:
+   ```bash
+   conda activate azl
+   ```
+2. Install dependencies (if not already installed):
    ```bash
    pip install -r requirements.txt
    ```
-2. Run training (coming soon).
+3. Run training:
+   ```bash
+   python scripts/run_train.py
+   ```
