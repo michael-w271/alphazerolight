@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import sys
 import os
+import json
 from pathlib import Path
 
 # Add src to path - go up from ui/ to src/
@@ -65,6 +66,15 @@ st.markdown("""
     .status-draw {
         background-color: #fff9c4;
         color: #f57c00;
+    }
+    .replay-move {
+        text-align: center;
+        font-size: 1.2em;
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        border: 1px solid #ddd;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -203,17 +213,37 @@ def make_move(row, col, game, mcts):
     # Make AI move
     ai_move(game, mcts)
 
-def main():
+def render_board(board, key_prefix="game", on_click=None, disabled=False):
+    """Render the game board"""
+    for row in range(3):
+        cols = st.columns(3)
+        for col in range(3):
+            cell_value = board[row, col]
+            cell_display = get_cell_display(cell_value)
+            
+            if cell_value == 1:
+                button_label = f":blue[{cell_display}]"
+            elif cell_value == -1:
+                button_label = f":red[{cell_display}]"
+            else:
+                button_label = " "
+            
+            with cols[col]:
+                st.button(
+                    button_label,
+                    key=f"{key_prefix}_{row}_{col}",
+                    disabled=disabled or cell_value != 0,
+                    use_container_width=True,
+                    on_click=on_click,
+                    args=(row, col) if on_click else None
+                )
+
+def play_game_ui(game, mcts, device):
     st.title("🎮 AlphaZero Tic-Tac-Toe")
     
-    # Load model
-    game, model, mcts, device = load_model()
-    
-    # Initialize session state
     initialize_session_state()
     
-    # Sidebar
-    st.sidebar.title("ℹ️ Game Info")
+    # Sidebar info
     st.sidebar.markdown("""
     **How to Play:**
     - You are **X** (Blue)
@@ -221,7 +251,6 @@ def main():
     - Click on empty cells to make your move
     - AI will respond automatically
     """)
-    
     st.sidebar.markdown(f"**Device:** {device}")
     
     # Game status
@@ -244,14 +273,12 @@ def main():
     st.markdown(f'<div class="game-status {status_class}">{status_text}</div>', unsafe_allow_html=True)
     
     # Game board
-    st.markdown("### Game Board")
     for row in range(3):
         cols = st.columns(3)
         for col in range(3):
             cell_value = st.session_state.board[row, col]
             cell_display = get_cell_display(cell_value)
             
-            # Color code the button based on player
             if cell_value == 1:
                 button_label = f":blue[{cell_display}]"
             elif cell_value == -1:
@@ -308,6 +335,96 @@ def main():
                         unsafe_allow_html=True
                     )
             cols = st.columns(3)  # Reset for next row
+
+def evolution_ui():
+    st.title("📈 Training Evolution")
+    
+    # Show metrics plot
+    plot_path = Path("docs/training_plots/training_metrics.png")
+    if plot_path.exists():
+        st.image(str(plot_path), caption="Training Metrics", use_container_width=True)
+        st.markdown("---")
+    
+    json_path = Path("docs/evolution_replay.json")
+    if not json_path.exists():
+        st.error(f"Evolution data not found at {json_path}")
+        st.info("Please run `python scripts/generate_evolution_replay.py` first.")
+        return
+
+    with open(json_path, "r") as f:
+        evolution_data = json.load(f)
+
+    # Sidebar selection
+    iterations = [d['iteration'] for d in evolution_data]
+    if not iterations:
+        st.warning("No evolution data found.")
+        return
+        
+    selected_iter = st.sidebar.select_slider("Select Iteration", options=iterations, value=iterations[-1])
+    
+    data = next(d for d in evolution_data if d['iteration'] == selected_iter)
+    
+    st.markdown(f"### Iteration {selected_iter}")
+    st.markdown(f"**Model:** `{data['checkpoint']}`")
+    
+    res_map = {1: "AI Won (X)", -1: "AI Lost (O)", 0: "Draw"}
+    st.markdown(f"**Result:** {res_map.get(data['result'], 'Unknown')}")
+    
+    moves = data['moves']
+    
+    if 'replay_step' not in st.session_state:
+        st.session_state.replay_step = 0
+        
+    # Ensure step is valid
+    if st.session_state.replay_step > len(moves):
+        st.session_state.replay_step = 0
+        
+    # Controls
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅️ Prev"):
+            st.session_state.replay_step = max(0, st.session_state.replay_step - 1)
+    with col3:
+        if st.button("Next ➡️"):
+            st.session_state.replay_step = min(len(moves), st.session_state.replay_step + 1)
+            
+    step = st.session_state.replay_step
+    st.progress(step / len(moves) if len(moves) > 0 else 0)
+    st.caption(f"Step {step} / {len(moves)}")
+    
+    # Get board state
+    if step < len(moves):
+        current_move = moves[step]
+        board = np.array(current_move['board'])
+        next_player = current_move['player']
+        action = current_move['action']
+        
+        if action is not None:
+            player_name = "AI (X)" if next_player == 1 else "Random (O)"
+            st.markdown(f"<div class='replay-move'>{player_name} to move...</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div class='replay-move'>Game Over</div>", unsafe_allow_html=True)
+    else:
+        # Final state
+        last_move = moves[-1]
+        if last_move['action'] is None:
+            board = np.array(last_move['board'])
+            st.markdown("<div class='replay-move'>Final Board</div>", unsafe_allow_html=True)
+        else:
+            board = np.array(last_move['board'])
+
+    # Render board (read-only)
+    render_board(board, key_prefix="replay", disabled=True)
+
+def main():
+    game, model, mcts, device = load_model()
+    
+    page = st.sidebar.radio("Navigation", ["Play Game", "Training Evolution"])
+    
+    if page == "Play Game":
+        play_game_ui(game, mcts, device)
+    else:
+        evolution_ui()
 
 if __name__ == "__main__":
     main()
