@@ -17,7 +17,21 @@ A compact, scalable implementation of the AlphaZero algorithm, starting from Tic
    ```bash
    pip install -r requirements.txt
    ```
-3. Run training:
-   ```bash
-   python scripts/run_train.py
-   ```
+## Quick Start
+
+### Training
+To train the AlphaZero agent with the configured environment:
+```bash
+./run_training.sh
+```
+This will use the `azl` virtual environment and the settings in `src/alpha_zero_light/config.py`.
+
+### Play
+To play against the trained AI:
+```bash
+./run_app.sh
+```
+
+### Configuration
+You can adjust training parameters in `src/alpha_zero_light/config.py`.
+The environment configuration is stored in `env_config.sh`.

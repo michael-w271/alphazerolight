@@ -8,10 +8,10 @@ TRAINING_CONFIG = {
     'num_iterations': 50,
     
     # Self-play games per iteration
-    'num_self_play_iterations': 20,
+    'num_self_play_iterations': 100,
     
     # Training epochs per iteration
-    'num_epochs': 4,
+    'num_epochs': 10,
     
     # Batch size for training
     'batch_size': 64,
@@ -32,7 +32,7 @@ MCTS_CONFIG = {
     'C': 2,
     
     # Number of MCTS searches per move
-    'num_searches': 60,
+    'num_searches': 200,
 }
 
 # Model Configuration

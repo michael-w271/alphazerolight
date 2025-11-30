@@ -53,25 +53,23 @@ def plot_training_metrics(history, output_dir='docs/training_plots'):
     
     # Plot 3: Win Rate
     if history['eval_win_rate']:
-        # Get evaluation iterations (every eval_frequency iterations)
-        eval_iterations = []
-        for i, iter_num in enumerate(iterations):
-            if i < len(history['eval_win_rate']):
-                # Find which iterations had evaluations
-                if i % 5 == 0 or i == len(iterations) - 1:
-                    eval_iterations.append(iter_num)
-        
-        ax3 = axes[1, 0]
-        ax3.plot(eval_iterations[:len(history['eval_win_rate'])], 
-                [wr * 100 for wr in history['eval_win_rate']], 
-                'purple', linewidth=2, marker='D', markersize=6)
-        ax3.set_xlabel('Iteration')
-        ax3.set_ylabel('Win Rate (%)')
-        ax3.set_title('Win Rate vs Random Player')
-        ax3.set_ylim(0, 105)
-        ax3.axhline(y=50, color='gray', linestyle='--', alpha=0.5, label='Random baseline')
-        ax3.legend()
-        ax3.grid(True, alpha=0.3)
+        # Create x-axis for evaluations
+        num_evals = len(history['eval_win_rate'])
+        if num_evals > 0:
+            # Distribute evaluations evenly across iterations
+            eval_iterations = np.linspace(iterations[0], iterations[-1], num_evals)
+            
+            ax3 = axes[1, 0]
+            ax3.plot(eval_iterations, 
+                    [wr * 100 for wr in history['eval_win_rate']], 
+                    'purple', linewidth=2, marker='D', markersize=6)
+            ax3.set_xlabel('Iteration (Approx)')
+            ax3.set_ylabel('Win Rate (%)')
+            ax3.set_title('Win Rate vs Random Player')
+            ax3.set_ylim(0, 105)
+            ax3.axhline(y=50, color='gray', linestyle='--', alpha=0.5, label='Random baseline')
+            ax3.legend()
+            ax3.grid(True, alpha=0.3)
     else:
         axes[1, 0].text(0.5, 0.5, 'No evaluation data', 
                        ha='center', va='center', transform=axes[1, 0].transAxes)
