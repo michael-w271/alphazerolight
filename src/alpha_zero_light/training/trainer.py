@@ -1,15 +1,30 @@
 import torch
 import numpy as np
 import random
+import json
+from pathlib import Path
 from tqdm import tqdm
 
 class AlphaZeroTrainer:
-    def __init__(self, model, optimizer, game, args, mcts):
+    def __init__(self, model, optimizer, game, args, mcts, evaluator=None):
         self.model = model
         self.optimizer = optimizer
         self.game = game
         self.args = args
         self.mcts = mcts
+        self.evaluator = evaluator
+        
+        # Training history
+        self.history = {
+            'iterations': [],
+            'total_loss': [],
+            'policy_loss': [],
+            'value_loss': [],
+            'eval_win_rate': [],
+            'eval_wins': [],
+            'eval_losses': [],
+            'eval_draws': [],
+        }
 
     def self_play(self):
         memory = []
@@ -45,6 +60,11 @@ class AlphaZeroTrainer:
 
     def train(self, memory):
         random.shuffle(memory)
+        total_loss = 0
+        total_policy_loss = 0
+        total_value_loss = 0
+        num_batches = 0
+        
         for batch_idx in range(0, len(memory), self.args['batch_size']):
             sample = memory[batch_idx:min(len(memory), batch_idx + self.args['batch_size'])]
             state, policy_targets, value_targets = zip(*sample)
@@ -65,17 +85,84 @@ class AlphaZeroTrainer:
             loss.backward()
             self.optimizer.step()
             
-    def learn(self):
+            total_loss += loss.item()
+            total_policy_loss += policy_loss.item()
+            total_value_loss += value_loss.item()
+            num_batches += 1
+        
+        return total_loss / num_batches, total_policy_loss / num_batches, total_value_loss / num_batches
+            
+    def learn(self, checkpoint_dir='checkpoints'):
+        """
+        Main training loop with evaluation and metrics tracking
+        """
+        checkpoint_path = Path(checkpoint_dir)
+        checkpoint_path.mkdir(exist_ok=True)
+        
         for iteration in range(self.args['num_iterations']):
+            print(f"\n{'='*60}")
+            print(f"Iteration {iteration + 1}/{self.args['num_iterations']}")
+            print(f"{'='*60}")
+            
+            # Self-play
             memory = []
-            
             self.model.eval()
-            for self_play_idx in tqdm(range(self.args['num_self_play_iterations']), desc=f"Iteration {iteration} Self Play"):
+            for self_play_idx in tqdm(range(self.args['num_self_play_iterations']), 
+                                     desc=f"Self-Play"):
                 memory += self.self_play()
-                
-            self.model.train()
-            for epoch in tqdm(range(self.args['num_epochs']), desc=f"Iteration {iteration} Training"):
-                self.train(memory)
             
-            torch.save(self.model.state_dict(), f"model_{iteration}.pt")
-            torch.save(self.optimizer.state_dict(), f"optimizer_{iteration}.pt")
+            print(f"Generated {len(memory)} training samples")
+            
+            # Training
+            self.model.train()
+            epoch_losses = []
+            epoch_policy_losses = []
+            epoch_value_losses = []
+            
+            for epoch in tqdm(range(self.args['num_epochs']), desc=f"Training"):
+                loss, policy_loss, value_loss = self.train(memory)
+                epoch_losses.append(loss)
+                epoch_policy_losses.append(policy_loss)
+                epoch_value_losses.append(value_loss)
+            
+            avg_loss = np.mean(epoch_losses)
+            avg_policy_loss = np.mean(epoch_policy_losses)
+            avg_value_loss = np.mean(epoch_value_losses)
+            
+            print(f"Loss: {avg_loss:.4f} (Policy: {avg_policy_loss:.4f}, Value: {avg_value_loss:.4f})")
+            
+            # Save metrics
+            self.history['iterations'].append(iteration)
+            self.history['total_loss'].append(avg_loss)
+            self.history['policy_loss'].append(avg_policy_loss)
+            self.history['value_loss'].append(avg_value_loss)
+            
+            # Evaluation
+            if self.evaluator and (iteration % self.args.get('eval_frequency', 5) == 0 or iteration == self.args['num_iterations'] - 1):
+                print("\nEvaluating model...")
+                eval_results = self.evaluator.evaluate(
+                    num_games=self.args.get('num_eval_games', 20),
+                    verbose=True
+                )
+                print(f"Win Rate: {eval_results['win_rate']*100:.1f}% "
+                      f"(W:{eval_results['wins']} L:{eval_results['losses']} D:{eval_results['draws']})")
+                
+                self.history['eval_win_rate'].append(eval_results['win_rate'])
+                self.history['eval_wins'].append(eval_results['wins'])
+                self.history['eval_losses'].append(eval_results['losses'])
+                self.history['eval_draws'].append(eval_results['draws'])
+            
+            # Save checkpoint
+            torch.save(self.model.state_dict(), checkpoint_path / f"model_{iteration}.pt")
+            torch.save(self.optimizer.state_dict(), checkpoint_path / f"optimizer_{iteration}.pt")
+            
+            # Save training history
+            with open(checkpoint_path / "training_history.json", 'w') as f:
+                json.dump(self.history, f, indent=2)
+        
+        print(f"\n{'='*60}")
+        print("Training Complete!")
+        print(f"{'='*60}")
+        
+        return self.history
+
