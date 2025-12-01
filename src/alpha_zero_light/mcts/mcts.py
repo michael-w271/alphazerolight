@@ -66,7 +66,10 @@ class MCTS:
     def search(self, state):
         root = Node(self.game, self.args, state, visit_count=0)
         
-        for _ in range(self.args['num_searches']):
+        for i in range(self.args['num_searches']):
+            if i % 50 == 0:
+                # print(f"MCTS Search {i}/{self.args['num_searches']}")
+                pass
             node = root
             
             while node.is_fully_expanded():

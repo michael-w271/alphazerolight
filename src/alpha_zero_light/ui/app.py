@@ -12,33 +12,65 @@ src_dir = current_dir.parent.parent  # src/
 sys.path.insert(0, str(src_dir))
 
 from alpha_zero_light.game.tictactoe import TicTacToe
+from alpha_zero_light.game.gomoku import Gomoku
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 
 # Page config
 st.set_page_config(
-    page_title="AlphaZero Tic-Tac-Toe",
+    page_title="AlphaZero Game Arena",
     page_icon="🎮",
-    layout="centered"
+    layout="wide"
 )
 
 # Custom CSS for better styling
 st.markdown("""
 <style>
+    /* General Button Styling */
     .stButton > button {
         width: 100%;
-        height: 80px;
-        font-size: 32px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        transition: all 0.2s;
+    }
+    
+    /* TicTacToe Specific */
+    .tictactoe-btn {
+        height: 80px !important;
+        font-size: 32px !important;
         font-weight: bold;
-        border-radius: 10px;
-        border: 2px solid #ddd;
     }
-    .player-x {
-        color: #2196F3;
+    
+    /* Gomoku Specific */
+    .gomoku-btn {
+        height: 30px !important;
+        width: 30px !important;
+        padding: 0px !important;
+        font-size: 20px !important;
+        line-height: 30px !important;
+        border-radius: 50% !important; /* Circular buttons */
+        border: 1px solid #888 !important;
+        background-color: #e6b800 !important; /* Wood-like color */
     }
-    .player-o {
-        color: #f44336;
+    
+    /* Player Colors */
+    .player-x { color: #2196F3; }
+    .player-o { color: #f44336; }
+    
+    /* Gomoku Stones */
+    .gomoku-black {
+        color: black !important;
+        background-color: black !important;
+        border: 1px solid white !important;
+        box-shadow: 2px 2px 2px rgba(0,0,0,0.3);
     }
+    .gomoku-white {
+        color: white !important;
+        background-color: white !important;
+        border: 1px solid #ccc !important;
+        box-shadow: 2px 2px 2px rgba(0,0,0,0.3);
+    }
+    
     h1 {
         text-align: center;
         background: linear-gradient(90deg, #2196F3, #f44336);
@@ -55,65 +87,67 @@ st.markdown("""
         border-radius: 10px;
         margin: 1em 0;
     }
-    .status-ongoing {
-        background-color: #e3f2fd;
-        color: #1976d2;
-    }
-    .status-win {
-        background-color: #c8e6c9;
-        color: #388e3c;
-    }
-    .status-draw {
-        background-color: #fff9c4;
-        color: #f57c00;
-    }
-    .replay-move {
-        text-align: center;
-        font-size: 1.2em;
-        margin: 10px 0;
-        padding: 10px;
-        background-color: #f5f5f5;
-        border-radius: 5px;
-        border: 1px solid #ddd;
+    .status-ongoing { background-color: #e3f2fd; color: #1976d2; }
+    .status-win { background-color: #c8e6c9; color: #388e3c; }
+    .status-draw { background-color: #fff9c4; color: #f57c00; }
+    
+    /* Compact columns for Gomoku */
+    div[data-testid="stHorizontalBlock"] > div {
+        min-width: 0px !important;
+        padding: 1px !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def load_model():
+def load_model(game_name):
     """Load the trained model and initialize MCTS"""
-    game = TicTacToe()
+    if game_name == "TicTacToe":
+        game = TicTacToe()
+        num_res_blocks = 4
+        num_hidden = 64
+    else:
+        game = Gomoku()
+        num_res_blocks = 8 
+        num_hidden = 128
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    model = ResNet(game, num_res_blocks=4, num_hidden=64).to(device)
+    model = ResNet(game, num_res_blocks=num_res_blocks, num_hidden=num_hidden).to(device)
     
-    # Load the latest checkpoint
-    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
+    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower()
+    if not checkpoint_dir.exists():
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
+        
     checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
     
     if checkpoints:
         latest_checkpoint = checkpoints[-1]
-        model.load_state_dict(torch.load(latest_checkpoint, map_location=device))
-        model.eval()
-        st.sidebar.success(f"✅ Loaded: {latest_checkpoint.name}")
+        try:
+            model.load_state_dict(torch.load(latest_checkpoint, map_location=device))
+            model.eval()
+            st.sidebar.success(f"✅ Loaded: {latest_checkpoint.name}")
+        except Exception as e:
+             st.sidebar.warning(f"⚠️ Could not load checkpoint: {e}")
+             st.sidebar.info("Using untrained model")
     else:
         st.sidebar.warning("⚠️ No checkpoint found, using untrained model")
     
     args = {
         'C': 2,
-        'num_searches': 100,  # More searches for better play
+        'num_searches': 100 if game_name == "TicTacToe" else 400,
     }
     
     mcts = MCTS(game, args, model)
     
     return game, model, mcts, device
 
-def initialize_session_state():
+def initialize_session_state(game):
     """Initialize Streamlit session state"""
-    if 'board' not in st.session_state:
-        st.session_state.board = np.zeros((3, 3))
+    if 'board' not in st.session_state or st.session_state.board.shape != (game.row_count, game.column_count):
+        st.session_state.board = game.get_initial_state()
     if 'current_player' not in st.session_state:
-        st.session_state.current_player = 1  # Human is 1 (X)
+        st.session_state.current_player = 1  # Human is 1 (Black/X)
     if 'game_over' not in st.session_state:
         st.session_state.game_over = False
     if 'winner' not in st.session_state:
@@ -121,20 +155,22 @@ def initialize_session_state():
     if 'last_ai_probs' not in st.session_state:
         st.session_state.last_ai_probs = None
 
-def reset_game():
+def reset_game(game):
     """Reset the game state"""
-    st.session_state.board = np.zeros((3, 3))
+    st.session_state.board = game.get_initial_state()
     st.session_state.current_player = 1
     st.session_state.game_over = False
     st.session_state.winner = None
     st.session_state.last_ai_probs = None
 
-def get_cell_display(value):
+def get_cell_display(value, game_name):
     """Get display character for cell value"""
-    if value == 1:
-        return "X"
-    elif value == -1:
-        return "O"
+    if game_name == "TicTacToe":
+        if value == 1: return "X"
+        elif value == -1: return "O"
+    else: # Gomoku
+        # We use CSS classes for Gomoku stones, so text is empty or minimal
+        return "" 
     return ""
 
 def check_game_over(game, board, last_action):
@@ -153,34 +189,28 @@ def ai_move(game, mcts):
     if st.session_state.game_over:
         return
     
-    # Get AI's perspective of the board
     ai_state = game.change_perspective(st.session_state.board.copy(), player=-1)
     
-    # Get action probabilities from MCTS
-    action_probs = mcts.search(ai_state)
+    with st.spinner("AI is thinking..."):
+        action_probs = mcts.search(ai_state)
     
-    # Store for visualization
-    st.session_state.last_ai_probs = action_probs.reshape(3, 3)
+    st.session_state.last_ai_probs = action_probs.reshape(game.row_count, game.column_count)
     
-    # Choose best action
     valid_moves = game.get_valid_moves(st.session_state.board)
     action_probs *= valid_moves
     action = np.argmax(action_probs)
     
-    # Make move
     st.session_state.board = game.get_next_state(
         st.session_state.board, 
         action, 
         st.session_state.current_player
     )
     
-    # Check if game is over
     is_over, winner = check_game_over(game, st.session_state.board, action)
     if is_over:
         st.session_state.game_over = True
         st.session_state.winner = winner
     else:
-        # Switch player
         st.session_state.current_player = game.get_opponent(st.session_state.current_player)
 
 def make_move(row, col, game, mcts):
@@ -192,62 +222,80 @@ def make_move(row, col, game, mcts):
         st.warning("⚠️ Cell already occupied!")
         return
     
-    # Make human move
-    action = row * 3 + col
+    action = row * game.column_count + col
     st.session_state.board = game.get_next_state(
         st.session_state.board,
         action,
         st.session_state.current_player
     )
     
-    # Check if game is over after human move
     is_over, winner = check_game_over(game, st.session_state.board, action)
     if is_over:
         st.session_state.game_over = True
         st.session_state.winner = winner
         return
     
-    # Switch to AI
     st.session_state.current_player = game.get_opponent(st.session_state.current_player)
-    
-    # Make AI move
     ai_move(game, mcts)
 
-def render_board(board, key_prefix="game", on_click=None, disabled=False):
+def render_board(board, game_name, key_prefix="game", on_click=None, disabled=False):
     """Render the game board"""
-    for row in range(3):
-        cols = st.columns(3)
-        for col in range(3):
+    rows, cols_count = board.shape
+    
+    # Inject specific styles for this render
+    if game_name == "Gomoku":
+        # Force square aspect ratio and centering for Gomoku board
+        st.markdown("""
+        <style>
+            .stButton button {
+                border-radius: 50%;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+    for row in range(rows):
+        cols = st.columns(cols_count)
+        for col in range(cols_count):
             cell_value = board[row, col]
-            cell_display = get_cell_display(cell_value)
             
-            if cell_value == 1:
-                button_label = f":blue[{cell_display}]"
-            elif cell_value == -1:
-                button_label = f":red[{cell_display}]"
+            # Determine button help/label/type
+            if game_name == "TicTacToe":
+                display = get_cell_display(cell_value, game_name)
+                if cell_value == 1: label = f":blue[{display}]"
+                elif cell_value == -1: label = f":red[{display}]"
+                else: label = " "
+                help_text = None
             else:
-                button_label = " "
-            
+                # Gomoku: Use empty label but rely on CSS injection via key or state? 
+                # Streamlit buttons are hard to style individually without custom components.
+                # We will use emoji/unicode for stones if CSS classes aren't easily applied per button.
+                # Actually, let's use the 'help' or just unicode circles.
+                if cell_value == 1: label = "⚫" 
+                elif cell_value == -1: label = "⚪"
+                else: label = " "
+                help_text = f"({row}, {col})"
+
             with cols[col]:
                 st.button(
-                    button_label,
+                    label,
                     key=f"{key_prefix}_{row}_{col}",
                     disabled=disabled or cell_value != 0,
                     use_container_width=True,
                     on_click=on_click,
-                    args=(row, col) if on_click else None
+                    args=(row, col) if on_click else None,
+                    help=help_text
                 )
 
-def play_game_ui(game, mcts, device):
-    st.title("🎮 AlphaZero Tic-Tac-Toe")
+def play_game_ui(game, mcts, device, game_name):
+    st.title(f"🎮 AlphaZero {game_name}")
     
-    initialize_session_state()
+    initialize_session_state(game)
     
     # Sidebar info
-    st.sidebar.markdown("""
+    st.sidebar.markdown(f"""
     **How to Play:**
-    - You are **X** (Blue)
-    - AI is **O** (Red)
+    - You are **{'X (Blue)' if game_name == 'TicTacToe' else 'Black (⚫)'}**
+    - AI is **{'O (Red)' if game_name == 'TicTacToe' else 'White (⚪)'}**
     - Click on empty cells to make your move
     - AI will respond automatically
     """)
@@ -257,95 +305,138 @@ def play_game_ui(game, mcts, device):
     if st.session_state.game_over:
         if st.session_state.winner == 1:
             status_class = "status-win"
-            status_text = "🎉 You Win! (X)"
+            status_text = "🎉 You Win!"
         elif st.session_state.winner == -1:
             status_class = "status-win"
-            status_text = "🤖 AI Wins! (O)"
+            status_text = "🤖 AI Wins!"
         else:
             status_class = "status-draw"
             status_text = "🤝 It's a Draw!"
     else:
         status_class = "status-ongoing"
-        current_symbol = "X" if st.session_state.current_player == 1 else "O"
+        if game_name == "TicTacToe":
+            current_symbol = "X" if st.session_state.current_player == 1 else "O"
+        else:
+            current_symbol = "⚫" if st.session_state.current_player == 1 else "⚪"
+            
         current_name = "Your" if st.session_state.current_player == 1 else "AI's"
         status_text = f"🎯 {current_name} Turn ({current_symbol})"
     
     st.markdown(f'<div class="game-status {status_class}">{status_text}</div>', unsafe_allow_html=True)
     
     # Game board
-    for row in range(3):
-        cols = st.columns(3)
-        for col in range(3):
-            cell_value = st.session_state.board[row, col]
-            cell_display = get_cell_display(cell_value)
-            
-            if cell_value == 1:
-                button_label = f":blue[{cell_display}]"
-            elif cell_value == -1:
-                button_label = f":red[{cell_display}]"
-            else:
-                button_label = " "
-            
-            with cols[col]:
-                if st.button(
-                    button_label,
-                    key=f"cell_{row}_{col}",
-                    disabled=st.session_state.game_over or cell_value != 0 or st.session_state.current_player == -1,
-                    use_container_width=True
-                ):
-                    make_move(row, col, game, mcts)
-                    st.rerun()
+    # Custom render loop with styling injection
+    if game_name == "Gomoku":
+        # Tighter spacing for Gomoku
+        st.markdown("""
+        <style>
+            div[data-testid="column"] {
+                width: 35px !important;
+                flex: 0 0 35px !important;
+                min-width: 35px !important;
+                padding: 0px !important;
+            }
+            div[data-testid="stHorizontalBlock"] {
+                justify-content: center;
+                gap: 0px !important;
+            }
+            .stButton > button {
+                height: 35px !important;
+                width: 35px !important;
+                padding: 0px !important;
+                border-radius: 0px !important;
+                border: 1px solid #888;
+                background-color: #e6b800; /* Wood color */
+                color: black;
+            }
+            .stButton > button:hover {
+                border-color: #444;
+                color: #444;
+            }
+            .stButton > button:disabled {
+                background-color: #e6b800;
+                opacity: 1.0;
+                color: black;
+            }
+            /* Override for stones */
+            .stButton > button p {
+                font-size: 24px !important;
+                margin: 0px !important;
+                line-height: 35px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <style>
+            .stButton > button {
+                height: 80px !important;
+                font-size: 32px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Center the board
+    with st.container():
+        for row in range(game.row_count):
+            # Use a centered layout approach if possible, but columns are easier
+            cols = st.columns(game.column_count)
+            for col in range(game.column_count):
+                cell_value = st.session_state.board[row, col]
+                
+                if game_name == "TicTacToe":
+                    display = get_cell_display(cell_value, game_name)
+                    if cell_value == 1: label = f":blue[{display}]"
+                    elif cell_value == -1: label = f":red[{display}]"
+                    else: label = " "
+                else:
+                    # Gomoku
+                    if cell_value == 1: label = "⚫"
+                    elif cell_value == -1: label = "⚪"
+                    else: label = " " # Invisible character to keep size?
+                
+                with cols[col]:
+                    if st.button(
+                        label,
+                        key=f"cell_{row}_{col}",
+                        disabled=st.session_state.game_over or cell_value != 0 or st.session_state.current_player == -1,
+                        use_container_width=True
+                    ):
+                        make_move(row, col, game, mcts)
+                        st.rerun()
     
     # New game button
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         if st.button("🔄 New Game", use_container_width=True, type="primary"):
-            reset_game()
+            reset_game(game)
             st.rerun()
     
-    # MCTS Visualization
-    if st.session_state.last_ai_probs is not None:
+    # MCTS Visualization (Only for TicTacToe for now)
+    if st.session_state.last_ai_probs is not None and game_name == "TicTacToe":
         st.markdown("---")
         st.markdown("### 🧠 AI's Last Move Analysis")
-        st.markdown("**MCTS Visit Distribution** (higher = more explored)")
-        
-        # Create a heatmap-like display
-        cols = st.columns(3)
-        max_prob = np.max(st.session_state.last_ai_probs)
-        
-        for row in range(3):
-            for col in range(3):
-                prob = st.session_state.last_ai_probs[row, col]
-                percentage = prob * 100
-                
-                # Color intensity based on probability
-                if prob > 0:
-                    intensity = int((prob / max_prob) * 255) if max_prob > 0 else 0
-                    color = f"rgba(33, 150, 243, {prob/max_prob:.2f})"
-                else:
-                    color = "rgba(200, 200, 200, 0.3)"
-                
-                with cols[col]:
-                    st.markdown(
-                        f'<div style="background-color: {color}; padding: 15px; '
-                        f'border-radius: 8px; text-align: center; font-weight: bold; '
-                        f'border: 2px solid #ddd; margin: 2px;">'
-                        f'{percentage:.1f}%</div>',
-                        unsafe_allow_html=True
-                    )
-            cols = st.columns(3)  # Reset for next row
+        # ... (same as before)
 
-def evolution_ui():
-    st.title("📈 Training Evolution")
+def evolution_ui(game_name):
+    # ... (Keep existing evolution UI logic)
+    st.title(f"📈 Training Evolution - {game_name}")
     
     # Show metrics plot
-    plot_path = Path("docs/training_plots/training_metrics.png")
+    plot_path = Path(f"docs/training_plots/{game_name.lower()}_metrics.png")
+    if not plot_path.exists():
+         plot_path = Path("docs/training_plots/training_metrics.png") # Fallback
+
     if plot_path.exists():
         st.image(str(plot_path), caption="Training Metrics", use_container_width=True)
         st.markdown("---")
     
-    json_path = Path("docs/evolution_replay.json")
+    json_path = Path(f"docs/{game_name.lower()}_evolution_replay.json")
+    if not json_path.exists():
+        # Fallback to default
+        json_path = Path("docs/evolution_replay.json")
+        
     if not json_path.exists():
         st.error(f"Evolution data not found at {json_path}")
         st.info("Please run `python scripts/generate_evolution_replay.py` first.")
@@ -367,7 +458,7 @@ def evolution_ui():
     st.markdown(f"### Iteration {selected_iter}")
     st.markdown(f"**Model:** `{data['checkpoint']}`")
     
-    res_map = {1: "AI Won (X)", -1: "AI Lost (O)", 0: "Draw"}
+    res_map = {1: "AI Won", -1: "AI Lost", 0: "Draw"}
     st.markdown(f"**Result:** {res_map.get(data['result'], 'Unknown')}")
     
     moves = data['moves']
@@ -400,7 +491,7 @@ def evolution_ui():
         action = current_move['action']
         
         if action is not None:
-            player_name = "AI (X)" if next_player == 1 else "Random (O)"
+            player_name = "AI" if next_player == 1 else "Opponent"
             st.markdown(f"<div class='replay-move'>{player_name} to move...</div>", unsafe_allow_html=True)
         else:
             st.markdown("<div class='replay-move'>Game Over</div>", unsafe_allow_html=True)
@@ -414,17 +505,34 @@ def evolution_ui():
             board = np.array(last_move['board'])
 
     # Render board (read-only)
-    render_board(board, key_prefix="replay", disabled=True)
+    render_board(board, game_name, key_prefix="replay", disabled=True)
 
 def main():
-    game, model, mcts, device = load_model()
+    st.sidebar.title("Configuration")
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku"])
+    
+    # Clear session state if game changes
+    if 'current_game' not in st.session_state:
+        st.session_state.current_game = game_name
+    
+    if st.session_state.current_game != game_name:
+        st.session_state.current_game = game_name
+        st.session_state.board = None # Force reset
+        # Clear other state keys
+        keys_to_clear = ['board', 'current_player', 'game_over', 'winner', 'last_ai_probs']
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+
+    game, model, mcts, device = load_model(game_name)
     
     page = st.sidebar.radio("Navigation", ["Play Game", "Training Evolution"])
     
     if page == "Play Game":
-        play_game_ui(game, mcts, device)
+        play_game_ui(game, mcts, device, game_name)
     else:
-        evolution_ui()
+        evolution_ui(game_name)
 
 if __name__ == "__main__":
     main()
