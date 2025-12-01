@@ -1,0 +1,20 @@
+============================================================
+AlphaZero Light - Gomoku Training
+============================================================
+Device: cuda
+GPU: NVIDIA GeForce RTX 5080
+
+Training Configuration:
+  Iterations: 100
+  Self-play games per iteration: 100
+  Training epochs: 10
+  Batch size: 64
+  MCTS searches: 200
+  Evaluation frequency: every 1 iterations
+  Checkpoints: checkpoints/gomoku
+
+
+============================================================
+Iteration 1/100
+============================================================
+Self-Play:   0%|          | 0/100 [00:00<?, ?it/s]Self-Play:   1%|          | 1/100 [00:55<1:31:10, 55.25s/it]Self-Play:   2%|▏         | 2/100 [01:52<1:31:59, 56.32s/it]Self-Play:   3%|▎         | 3/100 [02:50<1:32:32, 57.24s/it]Self-Play:   4%|▍         | 4/100 [03:49<1:32:30, 57.82s/it]Self-Play:   5%|▌         | 5/100 [04:48<1:32:20, 58.32s/it]Self-Play:   6%|▌         | 6/100 [05:47<1:31:38, 58.49s/it]Self-Play:   7%|▋         | 7/100 [06:46<1:31:01, 58.73s/it]Self-Play:   8%|▊         | 8/100 [07:47<1:30:52, 59.26s/it]Self-Play:   9%|▉         | 9/100 [08:46<1:30:03, 59.38s/it]Self-Play:  10%|█         | 10/100 [09:45<1:28:46, 59.19s/it]Self-Play:  11%|█         | 11/100 [10:47<1:29:04, 60.06s/it]Self-Play:  12%|█▏        | 12/100 [11:49<1:29:09, 60.79s/it]Self-Play:  13%|█▎        | 13/100 [12:52<1:28:54, 61.32s/it]Self-Play:  14%|█▍        | 14/100 [13:51<1:26:47, 60.55s/it]Self-Play:  15%|█▌        | 15/100 [14:51<1:25:29, 60.34s/it]Self-Play:  16%|█▌        | 16/100 [15:52<1:24:46, 60.56s/it]

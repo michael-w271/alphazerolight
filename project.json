@@ -17,7 +17,7 @@
     "ml_framework": "PyTorch (CUDA 12.4)",
     "tracking": "MLflow",
     "ui": "Streamlit",
-    "environment_manager": "Conda",
+    "environment_manager": "Conda (env: azl)",
     "visualization": "Matplotlib, Plotly",
     "os": "Pop!_OS Linux",
     "hardware": {

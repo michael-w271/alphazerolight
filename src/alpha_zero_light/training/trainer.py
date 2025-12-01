@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import random
 import json
+import sys
 from pathlib import Path
 from tqdm import tqdm
 
@@ -97,21 +98,26 @@ class AlphaZeroTrainer:
         Main training loop with evaluation and metrics tracking
         """
         checkpoint_path = Path(checkpoint_dir)
-        checkpoint_path.mkdir(exist_ok=True)
+        checkpoint_path.mkdir(parents=True, exist_ok=True)
         
         for iteration in range(self.args['num_iterations']):
             print(f"\n{'='*60}")
-            print(f"Iteration {iteration + 1}/{self.args['num_iterations']}")
+            print(f"📍 Iteration {iteration + 1}/{self.args['num_iterations']}")
             print(f"{'='*60}")
+            sys.stdout.flush()
             
             # Self-play
             memory = []
             self.model.eval()
+            print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
+            sys.stdout.flush()
+            
             for self_play_idx in tqdm(range(self.args['num_self_play_iterations']), 
-                                     desc=f"Self-Play"):
+                                     desc=f"Self-Play", ncols=80, file=sys.stdout):
                 memory += self.self_play()
             
-            print(f"Generated {len(memory)} training samples")
+            print(f"✅ Generated {len(memory)} training samples")
+            sys.stdout.flush()
             
             # Training
             self.model.train()
@@ -119,7 +125,10 @@ class AlphaZeroTrainer:
             epoch_policy_losses = []
             epoch_value_losses = []
             
-            for epoch in tqdm(range(self.args['num_epochs']), desc=f"Training"):
+            print(f"🧠 Training neural network ({self.args['num_epochs']} epochs)...")
+            sys.stdout.flush()
+            
+            for epoch in tqdm(range(self.args['num_epochs']), desc=f"Training", ncols=80, file=sys.stdout):
                 loss, policy_loss, value_loss = self.train(memory)
                 epoch_losses.append(loss)
                 epoch_policy_losses.append(policy_loss)
@@ -129,7 +138,8 @@ class AlphaZeroTrainer:
             avg_policy_loss = np.mean(epoch_policy_losses)
             avg_value_loss = np.mean(epoch_value_losses)
             
-            print(f"Loss: {avg_loss:.4f} (Policy: {avg_policy_loss:.4f}, Value: {avg_value_loss:.4f})")
+            print(f"📊 Loss: {avg_loss:.4f} (Policy: {avg_policy_loss:.4f}, Value: {avg_value_loss:.4f})")
+            sys.stdout.flush()
             
             # Save metrics
             self.history['iterations'].append(iteration)
@@ -139,13 +149,15 @@ class AlphaZeroTrainer:
             
             # Evaluation
             if self.evaluator and (iteration % self.args.get('eval_frequency', 5) == 0 or iteration == self.args['num_iterations'] - 1):
-                print("\nEvaluating model...")
+                print(f"⚔️  Evaluating model...")
+                sys.stdout.flush()
                 eval_results = self.evaluator.evaluate(
                     num_games=self.args.get('num_eval_games', 20),
                     verbose=True
                 )
-                print(f"Win Rate: {eval_results['win_rate']*100:.1f}% "
+                print(f"🏆 Win Rate: {eval_results['win_rate']*100:.1f}% "
                       f"(W:{eval_results['wins']} L:{eval_results['losses']} D:{eval_results['draws']})")
+                sys.stdout.flush()
                 
                 self.history['eval_win_rate'].append(eval_results['win_rate'])
                 self.history['eval_wins'].append(eval_results['wins'])
@@ -153,16 +165,22 @@ class AlphaZeroTrainer:
                 self.history['eval_draws'].append(eval_results['draws'])
             
             # Save checkpoint
+            print(f"💾 Saving checkpoint...")
+            sys.stdout.flush()
             torch.save(self.model.state_dict(), checkpoint_path / f"model_{iteration}.pt")
             torch.save(self.optimizer.state_dict(), checkpoint_path / f"optimizer_{iteration}.pt")
             
             # Save training history
             with open(checkpoint_path / "training_history.json", 'w') as f:
                 json.dump(self.history, f, indent=2)
+            
+            print(f"✅ Iteration {iteration + 1} complete!")
+            sys.stdout.flush()
         
         print(f"\n{'='*60}")
-        print("Training Complete!")
+        print("🎉 Training Complete!")
         print(f"{'='*60}")
+        sys.stdout.flush()
         
         return self.history
 
