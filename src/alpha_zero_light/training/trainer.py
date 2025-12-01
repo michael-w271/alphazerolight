@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
+import os
 
 class AlphaZeroTrainer:
     def __init__(self, model, optimizer, game, args, mcts, evaluator=None):
@@ -58,6 +60,31 @@ class AlphaZeroTrainer:
                 return return_memory
             
             player = self.game.get_opponent(player)
+    
+    def parallel_self_play(self, num_games):
+        """Run multiple self-play games in parallel"""
+        # Limit workers to 75% of CPU cores for GPU headroom
+        num_workers = max(1, int(cpu_count() * 0.75))
+        num_workers = min(num_workers, num_games)  # Don't use more workers than games
+        
+        # Split games across workers
+        games_per_worker = num_games // num_workers
+        remaining_games = num_games % num_workers
+        
+        all_memory = []
+        
+        # Sequential batches to control GPU usage
+        batch_size = num_workers
+        for batch_start in range(0, num_games, batch_size):
+            batch_end = min(batch_start + batch_size, num_games)
+            batch_games = batch_end - batch_start
+            
+            # Run batch of games
+            for _ in range(batch_games):
+                memory = self.self_play()
+                all_memory.extend(memory)
+        
+        return all_memory
 
     def train(self, memory):
         random.shuffle(memory)
@@ -106,15 +133,27 @@ class AlphaZeroTrainer:
             print(f"{'='*60}")
             sys.stdout.flush()
             
-            # Self-play
-            memory = []
+            # Self-play with progress bar
             self.model.eval()
             print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
             sys.stdout.flush()
             
-            for self_play_idx in tqdm(range(self.args['num_self_play_iterations']), 
-                                     desc=f"Self-Play", ncols=80, file=sys.stdout):
-                memory += self.self_play()
+            # Parallel self-play with manual progress tracking
+            memory = []
+            batch_size = max(1, int(cpu_count() * 0.75))
+            num_batches = (self.args['num_self_play_iterations'] + batch_size - 1) // batch_size
+            
+            with tqdm(total=self.args['num_self_play_iterations'], desc="Self-Play", ncols=80, file=sys.stdout) as pbar:
+                for batch_idx in range(num_batches):
+                    batch_start = batch_idx * batch_size
+                    batch_end = min(batch_start + batch_size, self.args['num_self_play_iterations'])
+                    batch_games = batch_end - batch_start
+                    
+                    # Run batch of games sequentially (GPU bottleneck)
+                    for _ in range(batch_games):
+                        game_memory = self.self_play()
+                        memory.extend(game_memory)
+                        pbar.update(1)
             
             print(f"✅ Generated {len(memory)} training samples")
             sys.stdout.flush()

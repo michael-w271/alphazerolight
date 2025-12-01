@@ -13,6 +13,7 @@ sys.path.insert(0, str(src_dir))
 
 from alpha_zero_light.game.tictactoe import TicTacToe
 from alpha_zero_light.game.gomoku import Gomoku
+from alpha_zero_light.game.gomoku_9x9 import Gomoku9x9
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 
@@ -106,7 +107,11 @@ def load_model(game_name):
         game = TicTacToe()
         num_res_blocks = 4
         num_hidden = 64
-    else:
+    elif game_name == "Gomoku 9x9":
+        game = Gomoku9x9()
+        num_res_blocks = 4
+        num_hidden = 64
+    else:  # Gomoku 15x15
         game = Gomoku()
         num_res_blocks = 8 
         num_hidden = 128
@@ -115,7 +120,7 @@ def load_model(game_name):
     
     model = ResNet(game, num_res_blocks=num_res_blocks, num_hidden=num_hidden).to(device)
     
-    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower()
+    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
     if not checkpoint_dir.exists():
         checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
         
@@ -135,7 +140,7 @@ def load_model(game_name):
     
     args = {
         'C': 2,
-        'num_searches': 100 if game_name == "TicTacToe" else 400,
+        'num_searches': 100 if game_name == "TicTacToe" else (200 if game_name == "Gomoku 9x9" else 400),
     }
     
     mcts = MCTS(game, args, model)
@@ -509,7 +514,7 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku"])
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 15x15"])
     
     # Clear session state if game changes
     if 'current_game' not in st.session_state:
