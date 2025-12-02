@@ -16,7 +16,7 @@ TRAINING_CONFIG = {
     'num_epochs': 10,
     
     # Batch size for training (INCREASED for GPU utilization)
-    'batch_size': 256,
+    'batch_size': 512,
     
     # Temperature for exploration
     'temperature': 1.25,
@@ -37,13 +37,13 @@ MCTS_CONFIG = {
     'num_searches': 200,
 }
 
-# Model Configuration
+# Model Configuration - INCREASED for GPU utilization
 MODEL_CONFIG = {
-    # Number of residual blocks
-    'num_res_blocks': 4,
+    # Number of residual blocks (INCREASED: 4 -> 12)
+    'num_res_blocks': 12,
     
-    # Number of hidden channels
-    'num_hidden': 64,
+    # Number of hidden channels (INCREASED: 64 -> 256)
+    'num_hidden': 256,
     
     # Learning rate
     'learning_rate': 0.001,

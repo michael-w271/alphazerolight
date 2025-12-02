@@ -70,33 +70,6 @@ Gomoku (五子棋) is a traditional board game where players take turns placing 
 - Games last 50-100+ moves vs max 9
 - Each game requires thousands of neural network inferences
 
-### GPU Longevity
-
-**Question**: How long can the RTX 5080 run training before degradation?
-
-**Answer**: 
-- Modern GPUs like the RTX 5080 are designed for 24/7 operation
-- Expected lifespan: **5-10 years** with proper cooling
-- Current load is very conservative:
-  - 36% utilization
-  - 69W / 360W (19% of max power)
-  - Temperature: 39°C (well within safe range)
-  
-**Recommendations**:
-- Ensure good case airflow
-- Clean dust filters every 3-6 months
-- Monitor temperatures (stay below 80°C)
-- Your current usage is extremely safe for continuous operation
-
-### Playing in Parallel
-
-**Can you play games while training?**
-
-**YES!** Your RTX 5080 has 16GB VRAM:
-- Training uses ~400MB
-- Plenty of room for Overcooked, AAA games, etc.
-- Expect 10-20% slower training during heavy gaming
-- Games might run 5-10% slower but still very playable
 
 ## Usage
 
