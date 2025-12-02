@@ -62,28 +62,82 @@ class AlphaZeroTrainer:
             player = self.game.get_opponent(player)
     
     def parallel_self_play(self, num_games):
-        """Run multiple self-play games in parallel"""
-        # Limit workers to 75% of CPU cores for GPU headroom
-        num_workers = max(1, int(cpu_count() * 0.75))
-        num_workers = min(num_workers, num_games)  # Don't use more workers than games
-        
-        # Split games across workers
-        games_per_worker = num_games // num_workers
-        remaining_games = num_games % num_workers
-        
+        """
+        Run multiple self-play games in parallel using batch inference.
+        This is much more efficient than multiprocessing for GPU utilization.
+        """
+        # INCREASED batch size for higher GPU utilization (75%)
+        max_batch_size = 1024
         all_memory = []
         
-        # Sequential batches to control GPU usage
-        batch_size = num_workers
-        for batch_start in range(0, num_games, batch_size):
-            batch_end = min(batch_start + batch_size, num_games)
-            batch_games = batch_end - batch_start
+        for i in range(0, num_games, max_batch_size):
+            batch_size = min(max_batch_size, num_games - i)
             
-            # Run batch of games
-            for _ in range(batch_games):
-                memory = self.self_play()
-                all_memory.extend(memory)
-        
+            # Initialize batch of games
+            states = [self.game.get_initial_state() for _ in range(batch_size)]
+            players = [1] * batch_size
+            game_histories = [[] for _ in range(batch_size)]
+            active_indices = list(range(batch_size))
+            completed_games = 0
+            
+            # Loop until all games in this batch are finished
+            while active_indices:
+                # Prepare states for MCTS
+                active_states = [states[idx] for idx in active_indices]
+                active_players = [players[idx] for idx in active_indices]
+                
+                # Canonical states for MCTS (perspective of current player)
+                canonical_states = [
+                    self.game.change_perspective(s, p) 
+                    for s, p in zip(active_states, active_players)
+                ]
+                
+                # Run Batched MCTS
+                action_probs_batch = self.mcts.search_batch(canonical_states)
+                
+                # Make moves for all active games
+                next_active_indices = []
+                
+                for j, idx in enumerate(active_indices):
+                    state = states[idx]
+                    player = players[idx]
+                    action_probs = action_probs_batch[j]
+                    
+                    # Store history
+                    canonical_state = canonical_states[j]
+                    game_histories[idx].append((canonical_state, action_probs, player))
+                    
+                    # Choose action
+                    temperature_action_probs = action_probs ** (1 / self.args['temperature'])
+                    temperature_action_probs /= np.sum(temperature_action_probs)
+                    action = np.random.choice(self.game.action_size, p=temperature_action_probs)
+                    
+                    # Step game
+                    state = self.game.get_next_state(state, action, player)
+                    states[idx] = state
+                    
+                    # Check termination
+                    value, is_terminal = self.game.get_value_and_terminated(state, action)
+                    
+                    if is_terminal:
+                        # Game finished, process history
+                        return_memory = []
+                        for hist_state, hist_probs, hist_player in game_histories[idx]:
+                            hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
+                            return_memory.append((
+                                self.game.get_encoded_state(hist_state),
+                                hist_probs,
+                                hist_outcome
+                            ))
+                        all_memory.extend(return_memory)
+                        completed_games += 1
+                    else:
+                        # Continue game
+                        players[idx] = self.game.get_opponent(player)
+                        next_active_indices.append(idx)
+                
+                active_indices = next_active_indices
+                
         return all_memory
 
     def train(self, memory):
@@ -138,22 +192,9 @@ class AlphaZeroTrainer:
             print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
             sys.stdout.flush()
             
-            # Parallel self-play with manual progress tracking
-            memory = []
-            batch_size = max(1, int(cpu_count() * 0.75))
-            num_batches = (self.args['num_self_play_iterations'] + batch_size - 1) // batch_size
-            
-            with tqdm(total=self.args['num_self_play_iterations'], desc="Self-Play", ncols=80, file=sys.stdout) as pbar:
-                for batch_idx in range(num_batches):
-                    batch_start = batch_idx * batch_size
-                    batch_end = min(batch_start + batch_size, self.args['num_self_play_iterations'])
-                    batch_games = batch_end - batch_start
-                    
-                    # Run batch of games sequentially (GPU bottleneck)
-                    for _ in range(batch_games):
-                        game_memory = self.self_play()
-                        memory.extend(game_memory)
-                        pbar.update(1)
+            # Run parallel self-play
+            # We use a large batch size for efficiency
+            memory = self.parallel_self_play(self.args['num_self_play_iterations'])
             
             print(f"✅ Generated {len(memory)} training samples")
             sys.stdout.flush()
