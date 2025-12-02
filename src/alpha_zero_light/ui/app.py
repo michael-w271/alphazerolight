@@ -111,6 +111,10 @@ def load_model(game_name):
         game = Gomoku9x9()
         num_res_blocks = 4
         num_hidden = 64
+    elif game_name == "Gomoku 9x9 GPU Test":
+        game = Gomoku9x9()
+        num_res_blocks = 15  # GPU test model
+        num_hidden = 384
     else:  # Gomoku 15x15
         game = Gomoku()
         num_res_blocks = 8 
@@ -140,7 +144,7 @@ def load_model(game_name):
     
     args = {
         'C': 2,
-        'num_searches': 100 if game_name == "TicTacToe" else (200 if game_name == "Gomoku 9x9" else 400),
+        'num_searches': 100 if game_name == "TicTacToe" else (200 if "9x9" in game_name else 400),
     }
     
     mcts = MCTS(game, args, model)
@@ -514,7 +518,7 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 15x15"])
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
     
     # Clear session state if game changes
     if 'current_game' not in st.session_state:
