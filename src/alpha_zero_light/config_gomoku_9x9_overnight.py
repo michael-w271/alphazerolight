@@ -1,6 +1,7 @@
 """
 Configuration file for AlphaZero Light - Gomoku 9x9 (Overnight Training)
 Optimized for 6 hours of training with ~75% GPU usage
+HIGH GPU UTILIZATION VERSION
 """
 
 # Training Configuration
@@ -14,8 +15,8 @@ TRAINING_CONFIG = {
     # Training epochs per iteration
     'num_epochs': 10,
     
-    # Batch size for training
-    'batch_size': 64,
+    # Batch size for training (INCREASED for GPU utilization)
+    'batch_size': 256,
     
     # Temperature for exploration
     'temperature': 1.25,
@@ -32,8 +33,8 @@ MCTS_CONFIG = {
     # Exploration constant
     'C': 2,
     
-    # Number of MCTS searches per move
-    'num_searches': 100,
+    # Number of MCTS searches per move (INCREASED)
+    'num_searches': 200,
 }
 
 # Model Configuration

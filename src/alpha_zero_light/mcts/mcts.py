@@ -67,9 +67,6 @@ class MCTS:
         root = Node(self.game, self.args, state, visit_count=0)
         
         for i in range(self.args['num_searches']):
-            if i % 50 == 0:
-                # print(f"MCTS Search {i}/{self.args['num_searches']}")
-                pass
             node = root
             
             while node.is_fully_expanded():
@@ -98,3 +95,72 @@ class MCTS:
             action_probs[child.action_taken] = child.visit_count
         action_probs /= np.sum(action_probs)
         return action_probs
+
+    @torch.no_grad()
+    def search_batch(self, states, num_searches=None):
+        """
+        Batched MCTS search for multiple states simultaneously.
+        This maximizes GPU utilization by batching neural network calls.
+        """
+        if num_searches is None:
+            num_searches = self.args['num_searches']
+            
+        batch_size = len(states)
+        roots = [Node(self.game, self.args, state, visit_count=0) for state in states]
+        
+        for _ in range(num_searches):
+            # 1. Selection
+            nodes = []
+            for root in roots:
+                node = root
+                while node.is_fully_expanded():
+                    node = node.select()
+                nodes.append(node)
+            
+            # 2. Evaluation
+            encoded_states = []
+            valid_indices = []
+            values = np.zeros(batch_size)
+            
+            for i, node in enumerate(nodes):
+                value, is_terminal = self.game.get_value_and_terminated(node.state, node.action_taken)
+                value = self.game.get_opponent_value(value)
+                
+                if is_terminal:
+                    values[i] = value
+                else:
+                    encoded_states.append(self.game.get_encoded_state(node.state))
+                    valid_indices.append(i)
+            
+            if encoded_states:
+                # Batch inference
+                encoded_states_tensor = torch.tensor(np.array(encoded_states), device=self.model.device)
+                policies, nn_values = self.model(encoded_states_tensor)
+                
+                policies = torch.softmax(policies, axis=1).cpu().numpy()
+                nn_values = nn_values.cpu().numpy().flatten()
+                
+                # 3. Expansion
+                for idx, policy, nn_value in zip(valid_indices, policies, nn_values):
+                    node = nodes[idx]
+                    valid_moves = self.game.get_valid_moves(node.state)
+                    policy *= valid_moves
+                    policy /= np.sum(policy)
+                    
+                    node.expand(policy)
+                    values[idx] = nn_value
+            
+            # 4. Backpropagation
+            for node, value in zip(nodes, values):
+                node.backpropagate(value)
+        
+        # Calculate action probabilities
+        all_action_probs = []
+        for root in roots:
+            action_probs = np.zeros(self.game.action_size)
+            for child in root.children:
+                action_probs[child.action_taken] = child.visit_count
+            action_probs /= np.sum(action_probs)
+            all_action_probs.append(action_probs)
+            
+        return all_action_probs
