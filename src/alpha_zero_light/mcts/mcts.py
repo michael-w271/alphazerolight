@@ -79,19 +79,11 @@ class MCTS:
             value = self.game.get_opponent_value(value)
             
             if not is_terminal:
-                # Get encoded state (already a tensor)
-                encoded = self.game.get_encoded_state(node.state)
-                # Ensure it's (3, H, W), add batch dim to get (1, 3, H, W)
-                if encoded.ndim == 4:
-                    encoded = encoded.squeeze(0)
-                policy, value = self.model(encoded.unsqueeze(0).to(self.model.device))
+                policy, value = self.model(
+                    torch.tensor(self.game.get_encoded_state(node.state), device=self.model.device).unsqueeze(0)
+                )
                 policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
                 valid_moves = self.game.get_valid_moves(node.state)
-                # Ensure valid_moves is numpy 1D array for compatibility
-                if isinstance(valid_moves, torch.Tensor):
-                    valid_moves = valid_moves.cpu().numpy().flatten()
-                elif hasattr(valid_moves, 'flatten'):
-                    valid_moves = valid_moves.flatten()
                 policy *= valid_moves
                 policy /= np.sum(policy)
                 
@@ -130,19 +122,9 @@ class MCTS:
             
             # Wrapper for model to handle numpy <-> tensor conversion
             def model_wrapper(input_np):
-                # input_np is (B, 3, H, W) numpy array from C++ MCTS
-                # It reshapes the flat board states into encoded states
+                # input_np is (B, 3, H, W) numpy array
                 input_tensor = torch.tensor(input_np, device=self.model.device, dtype=torch.float32)
                 
-                # Handle various input shapes
-                if input_tensor.ndim == 5 and input_tensor.shape[1] == 1:
-                    # Fix 5D input (B, 1, 3, H, W) -> (B, 3, H, W)
-                    input_tensor = input_tensor.squeeze(1)
-                elif input_tensor.ndim == 2:
-                    # If input is (1, B*3*H*W), reshape to (B, 3, H, W)
-                    batch_size = input_tensor.shape[0] if input_tensor.shape[0] > 1 else input_tensor.shape[1] // (3 * self.game.board_size * self.game.board_size)
-                    input_tensor = input_tensor.reshape(batch_size, 3, self.game.board_size, self.game.board_size)
-               
                 policies, values = self.model(input_tensor)
                 
                 policies_np = torch.softmax(policies, axis=1).cpu().numpy()
@@ -162,7 +144,6 @@ class MCTS:
                     s = s.cpu().numpy()
                 states_np.append(s.flatten())
                 
-            # print("DEBUG: Calling C++ search_batch")
             cpp_results = self.cpp_mcts.search_batch(states_np, model_wrapper)
             
             # Convert list of lists to list of numpy arrays
@@ -174,8 +155,6 @@ class MCTS:
             pass
         except Exception as e:
             print(f"C++ MCTS failed, falling back to Python: {e}")
-            import traceback
-            traceback.print_exc()
             # Fallback
             
         batch_size = len(states)
@@ -212,10 +191,6 @@ class MCTS:
                     encoded_states_tensor = torch.cat(encoded_states, dim=0)
                 else:
                     encoded_states_tensor = torch.tensor(np.array(encoded_states), device=self.model.device)
-                
-                # print(f"DEBUG: Python MCTS input shape: {encoded_states_tensor.shape}")
-                if encoded_states_tensor.ndim == 5:
-                     encoded_states_tensor = encoded_states_tensor.squeeze(1)
                 
                 policies, nn_values = self.model(encoded_states_tensor)
                 
