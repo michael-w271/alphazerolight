@@ -233,6 +233,12 @@ class MCTS:
                     policy *= valid_moves
                     policy /= np.sum(policy)
                     
+                    # Add Dirichlet noise at root for exploration (CRITICAL for learning!)
+                    if node.parent is None:  # Root node
+                        noise = np.random.dirichlet([self.args.get('dirichlet_alpha', 0.3)] * len(policy))
+                        epsilon = self.args.get('dirichlet_epsilon', 0.25)
+                        policy = (1 - epsilon) * policy + epsilon * noise
+                    
                     node.expand(policy)
                     values[idx] = nn_value
             
