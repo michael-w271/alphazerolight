@@ -32,10 +32,11 @@ class Node:
         return best_child
     
     def get_ucb(self, child):
+        # Use actual Q-value (average reward), not inverted
         if child.visit_count == 0:
             q_value = 0
         else:
-            q_value = 1 - ((child.value_sum / child.visit_count) + 1) / 2
+            q_value = child.value_sum / child.visit_count
         return q_value + self.args['C'] * (math.sqrt(self.visit_count) / (child.visit_count + 1)) * child.prior
     
     def expand(self, policy):
@@ -66,7 +67,12 @@ class MCTS:
         self.model = model
         
     @torch.no_grad()
-    def search(self, state):
+    def search(self, state, add_noise=True, temperature=None):
+        """
+        MCTS search from given state.
+        add_noise: Add Dirichlet noise at root for exploration
+        temperature: Temperature for action selection (if None, uses config)
+        """
         root = Node(self.game, self.args, state, visit_count=0)
         
         for i in range(self.args['num_searches']):
@@ -87,16 +93,36 @@ class MCTS:
                 policy *= valid_moves
                 policy /= np.sum(policy)
                 
+                # Add Dirichlet noise at root node for exploration
+                if node == root and add_noise:
+                    noise = np.random.dirichlet([self.args.get('dirichlet_alpha', 0.3)] * len(policy))
+                    epsilon = self.args.get('dirichlet_epsilon', 0.25)
+                    policy = (1 - epsilon) * policy + epsilon * noise
+                
                 value = value.item()
                 
                 node.expand(policy)
                 
             node.backpropagate(value)    
             
+        # Return action probabilities based on visit counts
         action_probs = np.zeros(self.game.action_size)
         for child in root.children:
             action_probs[child.action_taken] = child.visit_count
-        action_probs /= np.sum(action_probs)
+            
+        # Apply temperature for action selection
+        if temperature is None:
+            temperature = self.args.get('temperature', 1.0)
+            
+        if temperature == 0:
+            # Argmax (deterministic)
+            action_probs = np.zeros_like(action_probs)
+            action_probs[np.argmax(action_probs)] = 1
+        else:
+            # Temperature-based sampling
+            action_probs = action_probs ** (1.0 / temperature)
+            action_probs /= np.sum(action_probs)
+            
         return action_probs
 
     @torch.no_grad()

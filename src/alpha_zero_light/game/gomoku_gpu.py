@@ -25,29 +25,35 @@ class GomokuGPU:
         return self.board_size
 
     def _create_win_kernels(self):
-        """Create 5x5 convolution kernels for detecting wins"""
+        """Create convolution kernels for detecting 5-in-a-row wins"""
         kernels = []
         
-        # Horizontal
-        k_h = torch.zeros((5, 5))
-        k_h[2, :] = 1
+        # Horizontal: 1x5 kernel (detects horizontal rows)
+        k_h = torch.ones((1, 5))
         kernels.append(k_h)
         
-        # Vertical
-        k_v = torch.zeros((5, 5))
-        k_v[:, 2] = 1
+        # Vertical: 5x1 kernel (detects vertical columns)
+        k_v = torch.ones((5, 1))
         kernels.append(k_v)
         
-        # Diagonal (down-right)
+        # Diagonal (down-right): 5x5 with diagonal
         k_d1 = torch.eye(5)
         kernels.append(k_d1)
         
-        # Diagonal (up-right)
+        # Diagonal (up-right): 5x5 with anti-diagonal
         k_d2 = torch.flip(torch.eye(5), [1])
         kernels.append(k_d2)
         
-        # Stack kernels: (4, 1, 5, 5) for Conv2d
-        return torch.stack(kernels).unsqueeze(1)
+        # Stack kernels: (4, 1, kernel_h, kernel_w) for Conv2d
+        # Need to pad each to same size for stacking
+        # Pad 1x5 to 5x5, Pad 5x1 to 5x5
+        padded_kernels = []
+        padded_kernels.append(F.pad(k_h, (0, 0, 2, 2)))  # 1x5 -> 5x5
+        padded_kernels.append(F.pad(k_v, (2, 2, 0, 0)))  # 5x1 -> 5x5  
+        padded_kernels.append(k_d1)  # already 5x5
+        padded_kernels.append(k_d2)  # already 5x5
+        
+        return torch.stack(padded_kernels).unsqueeze(1)
 
     def get_initial_state(self, batch_size=1):
         """Return batch of empty boards: (batch_size, 1, H, W)"""
@@ -92,16 +98,17 @@ class GomokuGPU:
         # Handle batched player input
         if isinstance(player, torch.Tensor) and player.ndim > 0:
             # player is (B,), need to broadcast to (B, 1, H, W)
+            # player is (B,), need to broadcast to (B, 1, 1, 1)
             player = player.view(-1, 1, 1, 1)
         
         # Filter board for current player positions (1 for player, 0 otherwise)
         player_board = (states == player).float()
         
         # Convolve with win kernels
-        # Padding=0 because we only care about full 5-in-a-row fits
-        # We need to handle edges correctly, but valid 5-in-a-row fits inside board
-        # Conv2d output: (B, 4, H-4, W-4)
-        conv = F.conv2d(player_board, self.kernels, padding=0)
+        # Use padding=2 to detect wins at edges (rows/cols 0 and 8)
+        # For horizontal/vertical: padding matches to detect all positions
+        # Output: (B, 4, H, W) with proper edge detection
+        conv = F.conv2d(player_board, self.kernels, padding=2)
         
         # Check if any value reaches 5 (win_length)
         # Max over kernels (dim 1) and spatial dims (2, 3)
