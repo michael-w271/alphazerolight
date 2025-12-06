@@ -121,6 +121,12 @@ def load_model(game_name, checkpoint_name=None):
         num_res_blocks = 9
         num_hidden = 256
         checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_long"
+    elif game_name == "Gomoku Fixed":
+        # NEW: Fixed model with UCB + edge win fixes
+        game = Gomoku9x9()
+        num_res_blocks = 12
+        num_hidden = 384
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_fixed"
     else:  # Gomoku 15x15
         game = Gomoku()
         num_res_blocks = 8 
@@ -706,7 +712,7 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku Long", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku Fixed", "Gomoku Long", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
     
     # Checkpoint selector - get available checkpoints
     checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
