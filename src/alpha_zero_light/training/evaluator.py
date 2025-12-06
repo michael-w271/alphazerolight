@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from tqdm import tqdm
 
 class Evaluator:
@@ -14,22 +15,33 @@ class Evaluator:
         Play a single game. Model plays as model_player, random plays as opponent.
         Returns: 1 if model wins, -1 if random wins, 0 if draw
         """
-        state = self.game.get_initial_state()
+        state = self.game.get_initial_state(1).squeeze(0)  # Get single game state
         player = 1
         
         while True:
             if player == model_player:
                 # Model's turn - use MCTS
-                neutral_state = self.game.change_perspective(state, player)
+                neutral_state = self.game.change_perspective(state.unsqueeze(0), player).squeeze(0)
                 action_probs = self.mcts.search(neutral_state)
                 action = np.argmax(action_probs)
             else:
                 # Random player's turn
-                valid_moves = self.game.get_valid_moves(state)
+                valid_moves = self.game.get_valid_moves(state.unsqueeze(0))
+                # Convert to numpy if needed
+                if hasattr(valid_moves, 'cpu'):
+                    valid_moves = valid_moves.cpu().numpy().flatten()
                 action = np.random.choice(self.game.action_size, p=valid_moves / np.sum(valid_moves))
             
-            state = self.game.get_next_state(state, action, player)
-            value, is_terminal = self.game.get_value_and_terminated(state, action)
+            state = self.game.get_next_state(state.unsqueeze(0), 
+                                            torch.tensor([action], device=self.game.device),
+                                            torch.tensor([player], device=self.game.device, dtype=torch.float32)).squeeze(0)
+            value, is_terminal = self.game.get_value_and_terminated(state.unsqueeze(0), 
+                                                                                    torch.tensor([action], device=self.game.device))
+            # Convert to Python types
+            if hasattr(value, 'item'):
+                value = value.item()
+            if hasattr(is_terminal, 'item'):
+                is_terminal = is_terminal.item()
             
             if is_terminal:
                 if value == 1:

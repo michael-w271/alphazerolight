@@ -10,7 +10,7 @@ from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 from alpha_zero_light.training.trainer import AlphaZeroTrainer
 from alpha_zero_light.training.evaluator import Evaluator
-from alpha_zero_light.config_gomoku_9x9 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS
+from alpha_zero_light.config_gomoku_30min import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS
 
 def main():
     print("="*60)
@@ -66,11 +66,12 @@ def main():
     print(f"  Checkpoints: {PATHS['checkpoints']}")
     print()
     
-    # Estimate time
-    est_time_per_game = 5  # seconds (much faster than 15x15)
-    est_total_games = TRAINING_CONFIG['num_iterations'] * TRAINING_CONFIG['num_self_play_iterations']
-    est_total_minutes = (est_time_per_game * est_total_games) / 60
-    print(f"⏱️  Estimated training time: ~{est_total_minutes:.0f} minutes")
+    # Estimate time (Parallel execution)
+    est_time_per_batch = 120  # seconds (conservative estimate for 2048 games in parallel)
+    num_batches = max(1, TRAINING_CONFIG['num_self_play_iterations'] // 4096) # 4096 is max_batch_size in trainer
+    est_time_per_iteration = num_batches * est_time_per_batch + 60 # +60s for training/eval
+    est_total_minutes = (est_time_per_iteration * TRAINING_CONFIG['num_iterations']) / 60
+    print(f"⏱️  Estimated training time: ~{est_total_minutes:.0f} minutes (Parallel Mode)")
     print()
     sys.stdout.flush()
     

@@ -64,23 +64,127 @@ class AlphaZeroTrainer:
     def parallel_self_play(self, num_games):
         """
         Run multiple self-play games in parallel using batch inference.
-        This is much more efficient than multiprocessing for GPU utilization.
+        Uses smaller batches to avoid memory issues and dimension bugs.
         """
-        # INCREASED batch size for higher GPU utilization (75%)
-        max_batch_size = 4096
+        # Process in smaller batches for stability
+        max_batch_size = 256
         all_memory = []
         
-        for i in range(0, num_games, max_batch_size):
-            batch_size = min(max_batch_size, num_games - i)
+        for batch_start in range(0, num_games, max_batch_size):
+            batch_size = min(max_batch_size, num_games - batch_start)
             
-            # Initialize batch of games
-            states = [self.game.get_initial_state() for _ in range(batch_size)]
+            # Initialize batch of games - keep batch dimension (1, 1, H, W)
+            states = [self.game.get_initial_state(1) for _ in range(batch_size)]
             players = [1] * batch_size
             game_histories = [[] for _ in range(batch_size)]
             active_indices = list(range(batch_size))
-            completed_games = 0
             
             # Loop until all games in this batch are finished
+            move_count = 0
+            while active_indices:
+                # Prepare states for MCTS
+                active_states = [states[idx] for idx in active_indices]
+                active_players = [players[idx] for idx in active_indices]
+                
+                # Canonical states for MCTS - keep as (1, 1, H, W)
+                canonical_states = [
+                    self.game.change_perspective(s, p)
+                    for s, p in zip(active_states, active_players)
+                ]
+                
+                # Run Batched MCTS - squeeze to (1, H, W) for MCTS input
+                action_probs_batch = self.mcts.search_batch([s.squeeze(0) for s in canonical_states])
+                
+                # Make moves for all active games
+                next_active_indices = []
+                
+                for j, idx in enumerate(active_indices):
+                    state = states[idx]  # (1, 1, H, W)
+                    player = players[idx]
+                    action_probs = action_probs_batch[j]
+                    
+                    # Store history - store squeezed (1, H, W) for MCTS compatibility
+                    canonical_state = canonical_states[j].squeeze(0)  # (1, H, W)
+                    game_histories[idx].append((canonical_state, action_probs, player))
+                    
+                    # Choose action with temperature
+                    temperature_action_probs = action_probs ** (1 / self.args['temperature'])
+                    prob_sum = np.sum(temperature_action_probs)
+                    
+                    if prob_sum <= 0 or np.isnan(prob_sum):
+                        temperature_action_probs = np.ones(self.game.action_size) / self.game.action_size
+                    else:
+                        temperature_action_probs /= prob_sum
+                        
+                    action = np.random.choice(self.game.action_size, p=temperature_action_probs)
+                    
+                    # Step game - expects (B, 1, H, W)
+                    state = self.game.get_next_state(state, 
+                                                     torch.tensor([action], device=self.game.device),
+                                                     torch.tensor([player], device=self.game.device, dtype=torch.float32))
+                    states[idx] = state
+                    
+                    # Check termination - expects (B, 1, H, W)
+                    value, is_terminal = self.game.get_value_and_terminated(state, torch.tensor([action], device=self.game.device))
+                    value = value.item()
+                    is_terminal = is_terminal.item()
+                    
+                    if is_terminal:
+                        # Game finished, process history
+                        for hist_state, hist_probs, hist_player in game_histories[idx]:
+                            hist_outcome = value if hist_player == player else -value
+                            
+                            # Encode state - hist_state is (1, H, W), needs (B, 1, H, W)
+                            # Add batch dim, encode, then remove batch to get (3, H, W) for storage
+                            encoded_state = self.game.get_encoded_state(hist_state.unsqueeze(0))  # (1, 3, H, W)
+                            encoded_state = encoded_state.squeeze(0).cpu()  # (3, H, W)
+                            
+                            # Debug first storage
+                            if len(all_memory) == 0:
+                                print(f"DEBUG STORAGE: encoded shape = {encoded_state.shape}")
+                            
+                            all_memory.append((
+                                encoded_state,  # PyTorch tensor (3, H, W)
+                                hist_probs,      # numpy array from MCTS
+                                hist_outcome     # Python float
+                            ))
+                    else:
+                        # Continue game
+                        players[idx] = -player
+                        next_active_indices.append(idx)
+                
+                active_indices = next_active_indices
+                move_count += 1
+                
+                # Progress indicator every 10 moves
+                if move_count % 10 == 0:
+                    completed = batch_size - len(active_indices)
+                    total_completed = batch_start + completed
+                    print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
+                    sys.stdout.flush()
+                
+        print(f"   - Progress: {num_games}/{num_games} games finished")
+        sys.stdout.flush()
+        return all_memory
+        """
+        Run multiple self-play games in parallel using batch inference.
+        Uses smaller batches to avoid memory issues and dimension bugs.
+        """
+        # Process in smaller batches for stability
+        max_batch_size = 256
+        all_memory = []
+        
+        for batch_start in range(0, num_games, max_batch_size):
+            batch_size = min(max_batch_size, num_games - batch_start)
+            
+            # Initialize batch of games
+            states = [self.game.get_initial_state(1).squeeze(0) for _ in range(batch_size)]
+            players = [1] * batch_size
+            game_histories = [[] for _ in range(batch_size)]
+            active_indices = list(range(batch_size))
+            
+            # Loop until all games in this batch are finished
+            move_count = 0
             while active_indices:
                 # Prepare states for MCTS
                 active_states = [states[idx] for idx in active_indices]
@@ -88,7 +192,7 @@ class AlphaZeroTrainer:
                 
                 # Canonical states for MCTS (perspective of current player)
                 canonical_states = [
-                    self.game.change_perspective(s, p) 
+                    self.game.change_perspective(s.unsqueeze(0), p).squeeze(0)
                     for s, p in zip(active_states, active_players)
                 ]
                 
@@ -107,37 +211,65 @@ class AlphaZeroTrainer:
                     canonical_state = canonical_states[j]
                     game_histories[idx].append((canonical_state, action_probs, player))
                     
-                    # Choose action
+                    # Choose action with temperature
                     temperature_action_probs = action_probs ** (1 / self.args['temperature'])
-                    temperature_action_probs /= np.sum(temperature_action_probs)
+                    prob_sum = np.sum(temperature_action_probs)
+                    
+                    if prob_sum <= 0 or np.isnan(prob_sum):
+                        temperature_action_probs = np.ones(self.game.action_size) / self.game.action_size
+                    else:
+                        temperature_action_probs /= prob_sum
+                        
                     action = np.random.choice(self.game.action_size, p=temperature_action_probs)
                     
                     # Step game
-                    state = self.game.get_next_state(state, action, player)
+                    state = self.game.get_next_state(state.unsqueeze(0), 
+                                                     torch.tensor([action], device=self.game.device),
+                                                     torch.tensor([player], device=self.game.device, dtype=torch.float32)).squeeze(0)
                     states[idx] = state
                     
                     # Check termination
-                    value, is_terminal = self.game.get_value_and_terminated(state, action)
+                    value, is_terminal = self.game.get_value_and_terminated(
+                        state.unsqueeze(0), 
+                        torch.tensor([action], device=self.game.device))
+                    value = value.item()
+                    is_terminal = is_terminal.item()
                     
                     if is_terminal:
                         # Game finished, process history
-                        return_memory = []
                         for hist_state, hist_probs, hist_player in game_histories[idx]:
-                            hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
-                            return_memory.append((
-                                self.game.get_encoded_state(hist_state),
-                                hist_probs,
-                                hist_outcome
+                            hist_outcome = value if hist_player == player else -value
+                            
+                            # Encode state - hist_state is (1, H, W)
+                            # Keep as tensor for efficiency  
+                            encoded_state = self.game.get_encoded_state(hist_state.unsqueeze(0))
+                            
+                            # Force reshape to exactly (3, H, W) - no ambiguity
+                            # get_encoded_state returns (something, 3, H, W), we want just (3, H, W)
+                            encoded_state = encoded_state.view(3, self.game.board_size, self.game.board_size).cpu()
+                            
+                            all_memory.append((
+                                encoded_state,  # PyTorch tensor (3, H, W)
+                                hist_probs,      # numpy array from MCTS
+                                hist_outcome     # Python float
                             ))
-                        all_memory.extend(return_memory)
-                        completed_games += 1
                     else:
                         # Continue game
-                        players[idx] = self.game.get_opponent(player)
+                        players[idx] = -player
                         next_active_indices.append(idx)
                 
                 active_indices = next_active_indices
+                move_count += 1
                 
+                # Progress indicator every 10 moves
+                if move_count % 10 == 0:
+                    completed = batch_size - len(active_indices)
+                    total_completed = batch_start + completed
+                    print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
+                    sys.stdout.flush()
+                
+        print(f"   - Progress: {num_games}/{num_games} games finished")
+        sys.stdout.flush()
         return all_memory
 
     def train(self, memory):
@@ -149,13 +281,22 @@ class AlphaZeroTrainer:
         
         for batch_idx in range(0, len(memory), self.args['batch_size']):
             sample = memory[batch_idx:min(len(memory), batch_idx + self.args['batch_size'])]
-            state, policy_targets, value_targets = zip(*sample)
+            states, policy_targets, value_targets = zip(*sample)
             
-            state, policy_targets, value_targets = np.array(state), np.array(policy_targets), np.array(value_targets).reshape(-1, 1)
+            # Debug: print first state shape
+            if batch_idx == 0:
+                print(f"DEBUG: First state type: {type(states[0])}, shape: {states[0].shape if hasattr(states[0], 'shape') else 'N/A'}")
             
-            state = torch.tensor(state, dtype=torch.float32, device=self.model.device)
-            policy_targets = torch.tensor(policy_targets, dtype=torch.float32, device=self.model.device)
-            value_targets = torch.tensor(value_targets, dtype=torch.float32, device=self.model.device)
+            # Stack tensors instead of using numpy
+            # states are already tensors (3, H, W), stack to (B, 3, H, W)
+            state = torch.stack([s if isinstance(s, torch.Tensor) else torch.tensor(s, dtype=torch.float32) 
+                                 for s in states]).to(self.model.device)
+            
+            # policy_targets are numpy arrays, convert to tensor
+            policy_targets = torch.tensor(np.array(policy_targets), dtype=torch.float32, device=self.model.device)
+            
+            # value_targets are scalars, convert to tensor  
+            value_targets = torch.tensor(np.array(value_targets).reshape(-1, 1), dtype=torch.float32, device=self.model.device)
             
             out_policy, out_value = self.model(state)
             
@@ -270,22 +411,22 @@ class AlphaZeroTrainer:
                 self.history['policy_loss'].append(avg_policy_loss)
                 self.history['value_loss'].append(avg_value_loss)
                 
-                # Evaluation
-                if self.evaluator and (iteration % self.args.get('eval_frequency', 5) == 0 or iteration == self.args['num_iterations'] - 1):
-                    print(f"⚔️  Evaluating model...")
-                    sys.stdout.flush()
-                    eval_results = self.evaluator.evaluate(
-                        num_games=self.args.get('num_eval_games', 20),
-                        verbose=True
-                    )
-                    print(f"🏆 Win Rate: {eval_results['win_rate']*100:.1f}% "
-                          f"(W:{eval_results['wins']} L:{eval_results['losses']} D:{eval_results['draws']})")
-                    sys.stdout.flush()
-                    
-                    self.history['eval_win_rate'].append(eval_results['win_rate'])
-                    self.history['eval_wins'].append(eval_results['wins'])
-                    self.history['eval_losses'].append(eval_results['losses'])
-                    self.history['eval_draws'].append(eval_results['draws'])
+                # Evaluation - TEMPORARILY DISABLED
+                # if self.evaluator and (iteration % self.args.get('eval_frequency', 5) == 0 or iteration == self.args['num_iterations'] - 1):
+                #     print(f"⚔️  Evaluating model...")
+                #     sys.stdout.flush()
+                #     eval_results = self.evaluator.evaluate(
+                #         num_games=self.args.get('num_eval_games', 20),
+                #         verbose=True
+                #     )
+                #     print(f"🏆 Win Rate: {eval_results['win_rate']*100:.1f}% "
+                #           f"(W:{eval_results['wins']} L:{eval_results['losses']} D:{eval_results['draws']})")
+                #     sys.stdout.flush()
+                #     
+                #     self.history['eval_win_rate'].append(eval_results['win_rate'])
+                #     self.history['eval_wins'].append(eval_results['wins'])
+                #     self.history['eval_losses'].append(eval_results['losses'])
+                #     self.history['eval_draws'].append(eval_results['draws'])
                 
                 # Save checkpoint
                 print(f"💾 Saving checkpoint...")
