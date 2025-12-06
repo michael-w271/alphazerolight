@@ -101,7 +101,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def load_model(game_name):
+def load_model(game_name, checkpoint_name=None):
     """Load the trained model and initialize MCTS"""
     if game_name == "TicTacToe":
         game = TicTacToe()
@@ -115,57 +115,39 @@ def load_model(game_name):
         game = Gomoku9x9()
         num_res_blocks = 15  # GPU test model
         num_hidden = 384
-    elif game_name == "Gomoku 30min":
-        # Our newly trained model!
-        from alpha_zero_light.game.gomoku_gpu import GomokuGPU
-        from alpha_zero_light.model.network import AlphaZeroNet
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        game = GomokuGPU(board_size=9, device=device)
-        model = AlphaZeroNet(game, num_res_blocks=9, num_hidden=256).to(device)
-        
-        # Load from our specific checkpoint directory
-        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_30min"
-        checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
-        
-        if checkpoints:
-            latest_checkpoint = checkpoints[-1]
-            try:
-                model.load_state_dict(torch.load(latest_checkpoint, map_location=device))
-                model.eval()
-                st.sidebar.success(f"✅ Loaded: {latest_checkpoint.name}")
-            except Exception as e:
-                st.sidebar.warning(f"⚠️ Could not load checkpoint: {e}")
-                st.sidebar.info("Using untrained model")
-        else:
-            st.sidebar.warning("⚠️ No checkpoint found, using untrained model")
-        
-        args = {
-            'C': 2,
-            'num_searches': 100,
-        }
-        
-        mcts = MCTS(game, model, args)
-        return game, model, mcts, device
-        
+    elif game_name == "Gomoku Long":
+        # Currently training model - loads latest checkpoint
+        game = Gomoku9x9()
+        num_res_blocks = 9
+        num_hidden = 256
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_long"
     else:  # Gomoku 15x15
         game = Gomoku()
         num_res_blocks = 8 
         num_hidden = 128
-
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model = ResNet(game, num_res_blocks=num_res_blocks, num_hidden=num_hidden).to(device)
     
-    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
-    if not checkpoint_dir.exists():
-        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
-        
+    # Determine checkpoint directory
+    if 'checkpoint_dir' not in locals():
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
+        if not checkpoint_dir.exists():
+            checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
+    
+    # Get all available checkpoints
     checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
     
     if checkpoints:
-        latest_checkpoint = checkpoints[-1]
+        # Use provided checkpoint name or default to latest
+        if checkpoint_name and checkpoint_name != "Latest (Auto)":
+            latest_checkpoint = checkpoint_dir / checkpoint_name
+        else:
+            latest_checkpoint = checkpoints[-1]
+        
         try:
-            model.load_state_dict(torch.load(latest_checkpoint, map_location=device))
+            model.load_state_dict(torch.load(latest_checkpoint, map_location=device), strict=False)
             model.eval()
             st.sidebar.success(f"✅ Loaded: {latest_checkpoint.name}")
         except Exception as e:
@@ -188,7 +170,7 @@ def initialize_session_state(game):
     if 'board' not in st.session_state or st.session_state.board.shape != (game.row_count, game.column_count):
         st.session_state.board = game.get_initial_state()
     if 'current_player' not in st.session_state:
-        st.session_state.current_player = 1  # Human is 1 (Black/X)
+        st.session_state.current_player = 1
     if 'game_over' not in st.session_state:
         st.session_state.game_over = False
     if 'winner' not in st.session_state:
@@ -209,9 +191,8 @@ def get_cell_display(value, game_name):
     if game_name == "TicTacToe":
         if value == 1: return "X"
         elif value == -1: return "O"
-    else: # Gomoku
-        # We use CSS classes for Gomoku stones, so text is empty or minimal
-        return "" 
+    else:
+        return ""
     return ""
 
 def check_game_over(game, board, last_action):
@@ -222,7 +203,7 @@ def check_game_over(game, board, last_action):
             if value == 1:
                 return True, st.session_state.current_player
             else:
-                return True, 0  # Draw
+                return True, 0
     return False, None
 
 def ai_move(game, mcts):
@@ -242,8 +223,8 @@ def ai_move(game, mcts):
     action = np.argmax(action_probs)
     
     st.session_state.board = game.get_next_state(
-        st.session_state.board, 
-        action, 
+        st.session_state.board,
+        action,
         st.session_state.current_player
     )
     
@@ -269,6 +250,167 @@ def make_move(row, col, game, mcts):
         action,
         st.session_state.current_player
     )
+    
+    is_over, winner = check_game_over(game, st.session_state.board, action)
+    if is_over:
+        st.session_state.game_over = True
+        st.session_state.winner = winner
+        return
+    
+    st.session_state.current_player = game.get_opponent(st.session_state.current_player)
+    ai_move(game, mcts)
+    """Initialize Streamlit session state"""
+    if 'board' not in st.session_state or st.session_state.board.shape != (game.row_count, game.column_count):
+        board = game.get_initial_state()
+        # Convert to numpy if it's a tensor
+        if hasattr(board, 'cpu'):
+            board = board.cpu().numpy()
+        if board.ndim == 3:  # (1, H, W) -> (H, W)
+            board = board.squeeze(0)
+        st.session_state.board = board
+    if 'current_player' not in st.session_state:
+        st.session_state.current_player = 1  # Human is 1 (Black/X)
+    if 'game_over' not in st.session_state:
+        st.session_state.game_over = False
+    if 'winner' not in st.session_state:
+        st.session_state.winner = None
+    if 'last_ai_probs' not in st.session_state:
+        st.session_state.last_ai_probs = None
+
+def get_board_for_display(board):
+    """Convert board to numpy array for display"""
+    if hasattr(board, 'cpu'):
+        board = board.cpu().numpy()
+    if board.ndim == 3:
+        board = board.squeeze(0)
+    return board
+
+def reset_game(game):
+    """Reset the game state"""
+    board = game.get_initial_state()
+    # Convert to numpy if needed
+    if hasattr(board, 'cpu'):
+        board = board.cpu().numpy()
+    if board.ndim == 3:
+        board = board.squeeze(0)
+    st.session_state.board = board
+    st.session_state.current_player = 1
+    st.session_state.game_over = False
+    st.session_state.winner = None
+    st.session_state.last_ai_probs = None
+
+def get_cell_display(value, game_name):
+    """Get display character for cell value"""
+    if game_name == "TicTacToe":
+        if value == 1: return "X"
+        elif value == -1: return "O"
+    else: # Gomoku
+        # We use CSS classes for Gomoku stones, so text is empty or minimal
+        return "" 
+    return ""
+
+def check_game_over(game, board, last_action):
+    """Check if game is over and return status"""
+    if last_action is not None:
+        # Convert board to tensor if needed for GPU game
+        if hasattr(game, 'device'):  # GomokuGPU
+            if not isinstance(board, torch.Tensor):
+                board_tensor = torch.tensor(board, device=game.device, dtype=torch.float32)
+                if board_tensor.ndim == 2:
+                    board_tensor = board_tensor.unsqueeze(0)  # (H,W) -> (1,H,W)
+            else:
+                board_tensor = board
+            action_tensor = torch.tensor([last_action], device=game.device)
+            value, is_terminal = game.get_value_and_terminated(board_tensor.unsqueeze(0), action_tensor)
+            value = value.item()
+            is_terminal = is_terminal.item()
+        else:  # CPU game
+            value, is_terminal = game.get_value_and_terminated(board, last_action)
+            
+        if is_terminal:
+            if value == 1:
+                return True, st.session_state.current_player
+            else:
+                return True, 0  # Draw
+    return False, None
+
+def ai_move(game, mcts):
+    """Make AI move"""
+    if st.session_state.game_over:
+        return
+    
+    # Convert board for GPU game
+    if hasattr(game, 'device'):  # GomokuGPU
+        board_tensor = torch.tensor(st.session_state.board, device=game.device, dtype=torch.float32)
+        if board_tensor.ndim == 2:
+            board_tensor = board_tensor.unsqueeze(0)  # (H,W) -> (1,H,W)
+        ai_state = game.change_perspective(board_tensor.unsqueeze(0), player=-1).squeeze(0)
+        ai_state_np = ai_state.cpu().numpy()
+    else:
+        ai_state_np = game.change_perspective(st.session_state.board.copy(), player=-1)
+    
+    with st.spinner("AI is thinking..."):
+        action_probs = mcts.search(ai_state_np)
+    
+    st.session_state.last_ai_probs = action_probs.reshape(game.row_count, game.column_count)
+    
+    # Get valid moves
+    if hasattr(game, 'device'):  # GomokuGPU
+        board_for_valid = torch.tensor(st.session_state.board, device=game.device, dtype=torch.float32)
+        if board_for_valid.ndim == 2:
+            board_for_valid = board_for_valid.unsqueeze(0).unsqueeze(0)  # (H,W) -> (1,1,H,W)
+        valid_moves = game.get_valid_moves(board_for_valid).cpu().numpy().flatten()
+    else:
+        valid_moves = game.get_valid_moves(st.session_state.board)
+        
+    action_probs *= valid_moves
+    action = np.argmax(action_probs)
+    
+    # Make move
+    if hasattr(game, 'device'):  # GomokuGPU  
+        board_tensor = torch.tensor(st.session_state.board, device=game.device, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        action_tensor = torch.tensor([action], device=game.device)
+        player_tensor = torch.tensor([st.session_state.current_player], device=game.device, dtype=torch.float32)
+        new_board = game.get_next_state(board_tensor, action_tensor, player_tensor)
+        st.session_state.board = new_board.squeeze().cpu().numpy()
+    else:
+        st.session_state.board = game.get_next_state(
+            st.session_state.board, 
+            action, 
+            st.session_state.current_player
+        )
+    
+    is_over, winner = check_game_over(game, st.session_state.board, action)
+    if is_over:
+        st.session_state.game_over = True
+        st.session_state.winner = winner
+    else:
+        st.session_state.current_player = game.get_opponent(st.session_state.current_player)
+
+def make_move(row, col, game, mcts):
+    """Handle human move"""
+    if st.session_state.game_over:
+        return
+    
+    if st.session_state.board[row, col] != 0:
+        st.warning("⚠️ Cell already occupied!")
+        return
+    
+    action = row * game.column_count + col
+    
+    # Make move
+    if hasattr(game, 'device'):  # GomokuGPU
+        board_tensor = torch.tensor(st.session_state.board, device=game.device, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        action_tensor = torch.tensor([action], device=game.device)
+        player_tensor = torch.tensor([st.session_state.current_player], device=game.device, dtype=torch.float32)
+        new_board = game.get_next_state(board_tensor, action_tensor, player_tensor)
+        st.session_state.board = new_board.squeeze().cpu().numpy()
+    else:
+        st.session_state.board = game.get_next_state(
+            st.session_state.board,
+            action,
+            st.session_state.current_player
+        )
     
     is_over, winner = check_game_over(game, st.session_state.board, action)
     if is_over:
@@ -335,8 +477,8 @@ def play_game_ui(game, mcts, device, game_name):
     # Sidebar info
     st.sidebar.markdown(f"""
     **How to Play:**
-    - You are **{'X (Blue)' if game_name == 'TicTacToe' else 'Black (⚫)'}**
-    - AI is **{'O (Red)' if game_name == 'TicTacToe' else 'White (⚪)'}**
+    - You are **{'X (Blue)' if game_name == 'TicTacToe' else 'Black (●)'}**
+    - AI is **{'O (Red)' if game_name == 'TicTacToe' else 'White (○)'}**
     - Click on empty cells to make your move
     - AI will respond automatically
     """)
@@ -358,7 +500,7 @@ def play_game_ui(game, mcts, device, game_name):
         if game_name == "TicTacToe":
             current_symbol = "X" if st.session_state.current_player == 1 else "O"
         else:
-            current_symbol = "⚫" if st.session_state.current_player == 1 else "⚪"
+            current_symbol = "●" if st.session_state.current_player == 1 else "○"
             
         current_name = "Your" if st.session_state.current_player == 1 else "AI's"
         status_text = f"🎯 {current_name} Turn ({current_symbol})"
@@ -372,38 +514,50 @@ def play_game_ui(game, mcts, device, game_name):
         st.markdown("""
         <style>
             div[data-testid="column"] {
-                width: 35px !important;
-                flex: 0 0 35px !important;
-                min-width: 35px !important;
-                padding: 0px !important;
+                width: 24px !important;
+                flex: 0 0 24px !important;
+                min-width: 24px !important;
+                padding: 1px !important;
             }
             div[data-testid="stHorizontalBlock"] {
                 justify-content: center;
-                gap: 0px !important;
+                gap: 1px !important;
             }
             .stButton > button {
-                height: 35px !important;
-                width: 35px !important;
+                height: 24px !important;
+                width: 24px !important;
                 padding: 0px !important;
                 border-radius: 0px !important;
-                border: 1px solid #888;
-                background-color: #e6b800; /* Wood color */
+                border: 1px solid #666;
+                background-color: #daa520; /* Gold/Wood color */
                 color: black;
+                min-height: 24px !important;
+                font-size: 16px !important;
             }
             .stButton > button:hover {
-                border-color: #444;
-                color: #444;
+                border-color: #333;
+                background-color: #c9950f;
             }
             .stButton > button:disabled {
-                background-color: #e6b800;
+                background-color: #daa520;
                 opacity: 1.0;
-                color: black;
             }
-            /* Override for stones */
+            /* Black stones - dark background, white border */
+            .stButton > button:disabled:has(p:first-child:contains("●")) {
+                background-color: #000000 !important;
+                border: 2px solid #ffffff !important;
+                box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            }
+            /* White stones - white background, dark border  */
+            .stButton > button:disabled:has(p:first-child:contains("○")) {
+                background-color: #ffffff !important;
+                border: 2px solid #000000 !important;
+                box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            }
             .stButton > button p {
-                font-size: 24px !important;
+                font-size: 26px !important;
                 margin: 0px !important;
-                line-height: 35px !important;
+                line-height: 24px !important;
             }
         </style>
         """, unsafe_allow_html=True)
@@ -420,7 +574,6 @@ def play_game_ui(game, mcts, device, game_name):
     # Center the board
     with st.container():
         for row in range(game.row_count):
-            # Use a centered layout approach if possible, but columns are easier
             cols = st.columns(game.column_count)
             for col in range(game.column_count):
                 cell_value = st.session_state.board[row, col]
@@ -431,10 +584,13 @@ def play_game_ui(game, mcts, device, game_name):
                     elif cell_value == -1: label = f":red[{display}]"
                     else: label = " "
                 else:
-                    # Gomoku
-                    if cell_value == 1: label = "⚫"
-                    elif cell_value == -1: label = "⚪"
-                    else: label = " " # Invisible character to keep size?
+                    # Gomoku - use better symbols
+                    if cell_value == 1: 
+                        label = "●"  # Filled circle (Black/You)
+                    elif cell_value == -1: 
+                        label = "○"  # Hollow circle (White/AI)
+                    else: 
+                        label = " "
                 
                 with cols[col]:
                     if st.button(
@@ -550,7 +706,23 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku Long", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
+    
+    # Checkpoint selector - get available checkpoints
+    checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
+    if not checkpoint_dir.exists():
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints"
+    
+    checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
+    selected_checkpoint = None
+    
+    if checkpoints:
+        checkpoint_options = ["Latest (Auto)"] + [cp.name for cp in checkpoints]
+        selected_checkpoint = st.sidebar.selectbox(
+            "Model Checkpoint",
+            checkpoint_options,
+            help="Select a specific checkpoint or use latest automatically"
+        )
     
     # Clear session state if game changes
     if 'current_game' not in st.session_state:
@@ -566,7 +738,7 @@ def main():
                 del st.session_state[key]
         st.rerun()
 
-    game, model, mcts, device = load_model(game_name)
+    game, model, mcts, device = load_model(game_name, selected_checkpoint)
     
     page = st.sidebar.radio("Navigation", ["Play Game", "Training Evolution"])
     
