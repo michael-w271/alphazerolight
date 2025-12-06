@@ -67,7 +67,7 @@ class AlphaZeroTrainer:
         This is much more efficient than multiprocessing for GPU utilization.
         """
         # INCREASED batch size for higher GPU utilization (75%)
-        max_batch_size = 1024
+        max_batch_size = 4096
         all_memory = []
         
         for i in range(0, num_games, max_batch_size):
@@ -185,10 +185,41 @@ class AlphaZeroTrainer:
         iteration_times = []
         
         # Create progress bar for iterations
-        with tqdm(total=self.args['num_iterations'], desc="Overall Progress", 
+        start_iteration = 0
+        
+        # Check for existing checkpoints to resume
+        history_path = checkpoint_path / "training_history.json"
+        if history_path.exists():
+            print(f"🔄 Found existing training history at {history_path}")
+            try:
+                with open(history_path, 'r') as f:
+                    loaded_history = json.load(f)
+                
+                if loaded_history['iterations']:
+                    last_iteration = loaded_history['iterations'][-1]
+                    model_path = checkpoint_path / f"model_{last_iteration}.pt"
+                    optimizer_path = checkpoint_path / f"optimizer_{last_iteration}.pt"
+                    
+                    if model_path.exists() and optimizer_path.exists():
+                        print(f"📥 Resuming from iteration {last_iteration + 1}...")
+                        self.model.load_state_dict(torch.load(model_path, map_location=self.model.device))
+                        self.optimizer.load_state_dict(torch.load(optimizer_path, map_location=self.model.device))
+                        self.history = loaded_history
+                        start_iteration = last_iteration + 1
+                        print(f"✅ Model and Optimizer state loaded.")
+                    else:
+                        print(f"⚠️  History found but checkpoints missing for iteration {last_iteration}. Starting from scratch.")
+            except Exception as e:
+                print(f"⚠️  Failed to load history: {e}. Starting from scratch.")
+        
+        if start_iteration >= self.args['num_iterations']:
+            print(f"✨ Training already completed ({start_iteration} iterations done).")
+            return self.history
+
+        with tqdm(total=self.args['num_iterations'], initial=start_iteration, desc="Overall Progress", 
                   ncols=100, file=sys.stdout, position=0) as pbar_iterations:
             
-            for iteration in range(self.args['num_iterations']):
+            for iteration in range(start_iteration, self.args['num_iterations']):
                 iteration_start_time = time.time()
                 
                 print(f"\n{'='*60}")
@@ -199,6 +230,8 @@ class AlphaZeroTrainer:
                 # Self-play with progress bar
                 self.model.eval()
                 print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
+                print(f"   - Batch Size: {self.args.get('batch_size', 'Auto')}")
+                print(f"   - Device: {self.model.device}")
                 sys.stdout.flush()
                 
                 # Run parallel self-play

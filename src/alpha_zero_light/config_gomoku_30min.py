@@ -1,15 +1,15 @@
 """
-Configuration file for AlphaZero Light - Gomoku 9x9 (Fast Training)
+Configuration for 30-minute GPU training run
+Target: High throughput, fast initial learning
 """
 
-# Training Configuration
-# Training Configuration
+# Training Configuration - 30 MINUTE RUN
 TRAINING_CONFIG = {
-    # Number of training iterations
-    'num_iterations': 200,
+    # 30 mins total. ~5-6 mins per iteration.
+    'num_iterations': 6,
     
     # Self-play games per iteration
-    # Turbocharged with C++ MCTS: 2048 parallel games
+    # High parallelism: 2048 games in parallel (Increased for GPU utilization)
     'num_self_play_iterations': 2048,
     
     # Training epochs per iteration
@@ -24,7 +24,7 @@ TRAINING_CONFIG = {
     # Evaluation games per iteration
     'num_eval_games': 20,
     
-    # Evaluate every N iterations
+    # Evaluate every iteration to see progress
     'eval_frequency': 1,
 }
 
@@ -34,19 +34,20 @@ MCTS_CONFIG = {
     'C': 2,
     
     # Number of MCTS searches per move
-    'num_searches': 50,
+    # Lower count for speed during self-play
+    'num_searches': 100,
 }
 
 # Model Configuration
 MODEL_CONFIG = {
     # Number of residual blocks
-    'num_res_blocks': 4,
+    'num_res_blocks': 20,
     
     # Number of hidden channels
-    'num_hidden': 64,
+    'num_hidden': 256,
     
     # Learning rate
-    'learning_rate': 0.001,
+    'learning_rate': 0.002,
     
     # Weight decay
     'weight_decay': 0.0001,
@@ -54,8 +55,7 @@ MODEL_CONFIG = {
 
 # Paths
 PATHS = {
-    'checkpoints': 'checkpoints/gomoku_9x9',
-    'plots': 'docs/training_plots/gomoku_9x9',
-    'logs': 'logs/gomoku_9x9',
-    'mlruns': 'mlruns',
+    'checkpoints': 'checkpoints/gomoku_30min',
+    'plots': 'docs/training_plots', # Save directly to website assets source
+    'logs': 'logs/gomoku_30min',
 }

@@ -35,3 +35,10 @@ To play against the trained AI:
 ### Configuration
 You can adjust training parameters in `src/alpha_zero_light/config.py`.
 The environment configuration is stored in `env_config.sh`.
+
+## Website Showcase
+To view the project showcase website locally:
+```bash
+python scripts/serve_website.py
+```
+Then open `http://localhost:8000` in your browser.

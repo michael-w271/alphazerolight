@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaZero Light | The Guide</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <div class="background-glow"></div>
+
+    <nav class="navbar">
+        <div class="logo"><a href="index.html" style="text-decoration: none; color: inherit;">AlphaZero<span
+                    class="highlight">Light</span></a></div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#beginner">The Concept</a>
+            <a href="#advanced">The Code</a>
+            <a href="https://github.com/mbenz227/alphazerolight" target="_blank" class="github-btn">GitHub</a>
+        </div>
+    </nav>
+
+    <div class="guide-container">
+        <aside class="sidebar">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#intro">Introduction</a></li>
+                <li><a href="#beginner">Part 1: The Concept</a>
+                    <ul>
+                        <li><a href="#intuition">Intuition (Neural Net)</a></li>
+                        <li><a href="#thinking">Thinking (MCTS)</a></li>
+                        <li><a href="#learning">Learning (Self-Play)</a></li>
+                    </ul>
+                </li>
+                <li><a href="#advanced">Part 2: The Implementation</a>
+                    <ul>
+                        <li><a href="#tensors">The Board as Numbers</a></li>
+                        <li><a href="#resnet">The Brain (ResNet)</a></li>
+                        <li><a href="#mcts-algo">The Search Algorithm</a></li>
+                        <li><a href="#training-loop">The Training Loop</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="content">
+            <header class="guide-header">
+                <h1>Building AlphaZero from Scratch</h1>
+                <p class="subtitle">A step-by-step guide to understanding and implementing superhuman AI.</p>
+            </header>
+
+            <section id="intro" class="section-guide">
+                <h2>Introduction</h2>
+                <p>
+                    AlphaZero is one of the most elegant algorithms in modern AI. It learns to play games like Chess,
+                    Go, and Gomoku
+                    starting from <em>zero</em> knowledge—just the rules of the game.
+                </p>
+                <p>
+                    This guide explains how <strong>AlphaZero Light</strong> works. We've stripped away the complexity
+                    of Google's massive infrastructure
+                    to show you the core ideas in clean, readable Python.
+                </p>
+            </section>
+
+            <hr class="divider">
+
+            <section id="beginner" class="section-guide">
+                <h2>Part 1: The Concept (For Everyone)</h2>
+                <p>
+                    Imagine you are playing a board game. To play well, you need two things:
+                </p>
+
+                <div id="intuition" class="concept-block">
+                    <h3>1. Intuition (The Neural Network)</h3>
+                    <p>
+                        When you look at a board, you immediately have a "feeling" about which moves are good and who is
+                        winning.
+                        In our AI, this is the job of the <strong>Deep Neural Network</strong>.
+                    </p>
+                    <div class="analogy">
+                        <strong>Analogy:</strong> It's like a "gut feeling". It looks at the board and instantly says:
+                        <em>"I think moving here is good (Policy), and I think I'm winning (Value)."</em>
+                    </div>
+                </div>
+
+                <div id="thinking" class="concept-block">
+                    <h3>2. Thinking Ahead (MCTS)</h3>
+                    <p>
+                        Intuition isn't enough. You need to calculate: "If I go here, they go there..."
+                        This is the job of <strong>Monte Carlo Tree Search (MCTS)</strong>.
+                    </p>
+                    <p>
+                        The AI simulates thousands of possible futures in its "mind". It uses its intuition to guide
+                        this search,
+                        focusing on promising moves instead of wasting time on bad ones.
+                    </p>
+                </div>
+
+                <div id="learning" class="concept-block">
+                    <h3>3. Learning (Self-Play)</h3>
+                    <p>
+                        How does it get smarter? It plays against itself!
+                    </p>
+                    <ul class="step-list">
+                        <li><strong>Step 1:</strong> It plays a game using its current "brain" and "thinking".</li>
+                        <li><strong>Step 2:</strong> It sees the result (Win/Loss).</li>
+                        <li><strong>Step 3:</strong> It trains its "brain" to predict that result better next time.</li>
+                        <li><strong>Repeat:</strong> Do this millions of times, and it becomes superhuman.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <hr class="divider">
+
+            <section id="advanced" class="section-guide">
+                <h2>Part 2: The Implementation (For Engineers)</h2>
+                <p>
+                    Ready to see the code? Let's dive into the Python implementation using PyTorch.
+                </p>
+
+                <div id="tensors" class="tech-block">
+                    <h3>The Board as Numbers (Tensors)</h3>
+                    <p>
+                        The neural network can't "see" a board. We convert the 15x15 Gomoku board into a stack of
+                        <strong>17 planes</strong> (Tensors).
+                    </p>
+                    <pre><code class="language-python">
+# Shape: [Batch_Size, 17, 15, 15]
+# - 8 planes for my pieces (history)
+# - 8 planes for opponent's pieces (history)
+# - 1 plane for "whose turn is it?"
+                    </code></pre>
+                    <p>
+                        This allows the network to understand the current position and the recent history of moves.
+                    </p>
+                </div>
+
+                <div id="resnet" class="tech-block">
+                    <h3>The Brain: ResNet Architecture</h3>
+                    <p>
+                        We use a <strong>Residual Network (ResNet)</strong>. It has a common "trunk" that processes the
+                        board,
+                        and then splits into two "heads":
+                    </p>
+                    <ul>
+                        <li><strong>Policy Head:</strong> Outputs a probability distribution over all 225 squares.
+                            (Where to move?)</li>
+                        <li><strong>Value Head:</strong> Outputs a single number between -1 and 1. (Am I winning?)</li>
+                    </ul>
+                    <div class="code-link">
+                        <a href="https://github.com/mbenz227/alphazerolight/blob/main/src/alpha_zero_light/model/resnet.py"
+                            target="_blank">View Code: src/model/resnet.py</a>
+                    </div>
+                </div>
+
+                <div id="mcts-algo" class="tech-block">
+                    <h3>The Search: MCTS + PUCT</h3>
+                    <p>
+                        We don't use standard Minimax. We use MCTS guided by the PUCT formula (Predictor + Upper
+                        Confidence Bound applied to Trees).
+                    </p>
+                    <div class="math-box">
+                        PUCT = Q(s,a) + U(s,a)
+                    </div>
+                    <p>
+                        The algorithm balances <strong>Exploitation</strong> (Q: moves that lead to wins) and
+                        <strong>Exploration</strong> (U: moves the neural net thinks are good but we haven't tried
+                        much).
+                    </p>
+                    <div class="code-link">
+                        <a href="https://github.com/mbenz227/alphazerolight/blob/main/src/alpha_zero_light/mcts/mcts_gpu.py"
+                            target="_blank">View Code: src/mcts/mcts_gpu.py</a>
+                    </div>
+                </div>
+
+                <div id="training-loop" class="tech-block">
+                    <h3>The Training Loop</h3>
+                    <p>
+                        To make this fast on a GPU, we don't play one game at a time. We play <strong>hundreds of games
+                            in parallel</strong>.
+                    </p>
+                    <p>
+                        The `SelfPlayWorker` gathers states from many games, batches them together, sends them to the
+                        GPU for inference,
+                        and then steps the MCTS simulations forward. This ensures the GPU is always 100% utilized.
+                    </p>
+                </div>
+
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>
