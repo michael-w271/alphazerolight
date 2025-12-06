@@ -9,14 +9,14 @@ TRAINING_CONFIG = {
     'num_iterations': 6,
     
     # Self-play games per iteration
-    # High parallelism: 2048 games in parallel (Increased for GPU utilization)
-    'num_self_play_iterations': 2048,
+    # Smaller batch for stability and speed
+    'num_self_play_iterations': 256,
     
     # Training epochs per iteration
     'num_epochs': 5,
     
     # Batch size for training
-    'batch_size': 2048,
+    'batch_size': 256,
     
     # Temperature for exploration
     'temperature': 1.25,
@@ -35,7 +35,7 @@ MCTS_CONFIG = {
     
     # Number of MCTS searches per move
     # Lower count for speed during self-play
-    'num_searches': 100,
+    'num_searches': 10,
 }
 
 # Model Configuration
