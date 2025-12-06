@@ -1,0 +1,22 @@
+DEBUG: sys.path: ['/home/michael/.gemini/antigravity/scratch/alpha-zero-light/scripts', '/home/michael/.gemini/antigravity/scratch/alpha-zero-light', '/home/michael/.gemini/antigravity/scratch/alpha-zero-light/src', '/home/michael/miniforge3/envs/azl/lib/python310.zip', '/home/michael/miniforge3/envs/azl/lib/python3.10', '/home/michael/miniforge3/envs/azl/lib/python3.10/lib-dynload', '/home/michael/miniforge3/envs/azl/lib/python3.10/site-packages', '/home/michael/.gemini/antigravity/scratch/alpha-zero-light/src']
+Starting 30-minute AlphaZero Training Run...
+Overall Progress:   0%|                                                       | 0/6 [00:00<?, ?it/s]
+============================================================
+📍 Iteration 1/6
+============================================================
+🎮 Starting self-play (512 games)...
+Overall Progress:   0%|                                                       | 0/6 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/michael/.gemini/antigravity/scratch/alpha-zero-light/scripts/run_training_30min.py", line 41, in <module>
+    main()
+  File "/home/michael/.gemini/antigravity/scratch/alpha-zero-light/scripts/run_training_30min.py", line 38, in main
+    trainer.learn(checkpoint_dir=PATHS['checkpoints'])
+  File "/home/michael/.gemini/antigravity/scratch/alpha-zero-light/src/alpha_zero_light/training/trainer.py", line 206, in learn
+    memory = self.parallel_self_play(self.args['num_self_play_iterations'])
+  File "/home/michael/.gemini/antigravity/scratch/alpha-zero-light/src/alpha_zero_light/training/trainer.py", line 96, in parallel_self_play
+    action_probs_batch = self.mcts.search_batch(canonical_states)
+  File "/home/michael/miniforge3/envs/azl/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/michael/.gemini/antigravity/scratch/alpha-zero-light/src/alpha_zero_light/mcts/mcts.py", line 106, in search_batch
+    num_searches = self.args['num_searches']
+TypeError: 'ResNet' object is not subscriptable

@@ -16,6 +16,14 @@ class GomokuGPU:
         # Create convolution kernels for win detection
         self.kernels = self._create_win_kernels().to(self.device)
 
+    @property
+    def row_count(self):
+        return self.board_size
+
+    @property
+    def column_count(self):
+        return self.board_size
+
     def _create_win_kernels(self):
         """Create 5x5 convolution kernels for detecting wins"""
         kernels = []
@@ -41,7 +49,7 @@ class GomokuGPU:
         # Stack kernels: (4, 1, 5, 5) for Conv2d
         return torch.stack(kernels).unsqueeze(1)
 
-    def get_initial_state(self, batch_size):
+    def get_initial_state(self, batch_size=1):
         """Return batch of empty boards: (batch_size, 1, H, W)"""
         return torch.zeros((batch_size, 1, self.board_size, self.board_size), 
                           device=self.device, dtype=torch.float32)
@@ -102,13 +110,30 @@ class GomokuGPU:
         # Floating point safety (though we use 0/1, so it should be exact)
         return max_vals >= self.win_length - 0.1
 
-    def get_value_and_terminated(self, states, last_actions, last_player):
+    def get_value_and_terminated(self, states, last_actions):
         """
         Check wins and draws.
         Returns: 
             values: (B,) 1 if player won, 0 otherwise
             terminated: (B,) boolean
         """
+        # Infer player from the board state at the last action position
+        # We need to handle the batch dimension carefully
+        B = states.shape[0]
+        
+        # If last_actions is None (start of game), not terminated
+        if last_actions is None:
+             return torch.zeros(B, device=self.device), torch.zeros(B, dtype=torch.bool, device=self.device)
+
+        # Get player who just moved
+        rows = last_actions // self.board_size
+        cols = last_actions % self.board_size
+        
+        # Extract player at these positions
+        # states is (B, 1, H, W)
+        batch_indices = torch.arange(B, device=self.device)
+        last_player = states[batch_indices, 0, rows, cols]
+        
         # Check if the player who just moved won
         has_won = self.check_win(states, last_player)
         
@@ -147,11 +172,16 @@ class GomokuGPU:
         # This requires knowing who is to play. 
         # If we assume canonical form (always 1 to move), then:
         
-        p1_stones = (states == 1).float()
-        p2_stones = (states == -1).float()
-        to_play = torch.ones_like(states) # Canonical: always 1 to move
+        # Match Gomoku9x9 (CPU) encoding for compatibility with old checkpoints
+        # Channel 0: Opponent (-1)
+        # Channel 1: Empty (0)
+        # Channel 2: Self (1)
         
-        return torch.cat([p1_stones, p2_stones, to_play], dim=1)
+        opponent = (states == -1).float()
+        empty = (states == 0).float()
+        self_stones = (states == 1).float()
+        
+        return torch.cat([opponent, empty, self_stones], dim=1)
 
     def change_perspective(self, states, player):
         """
@@ -162,3 +192,14 @@ class GomokuGPU:
         if isinstance(player, torch.Tensor):
             player = player.view(-1, 1, 1, 1)
         return states * player
+
+    def get_opponent(self, player):
+        return -player
+
+    def get_opponent_value(self, value):
+        return -value
+    
+    def action_to_string(self, action):
+        row = action // self.board_size
+        col = action % self.board_size
+        return f"({row},{col})"

@@ -5,7 +5,7 @@ import os
 # Add src to python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-from alpha_zero_light.game.gomoku_9x9 import Gomoku9x9
+from alpha_zero_light.game.gomoku_gpu import GomokuGPU
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 from alpha_zero_light.training.trainer import AlphaZeroTrainer
@@ -14,15 +14,18 @@ from alpha_zero_light.config_gomoku_9x9 import TRAINING_CONFIG, MCTS_CONFIG, MOD
 
 def main():
     print("="*60)
-    print("AlphaZero Light - Gomoku 9x9 (Fast Training)")
+    print("AlphaZero Light - Gomoku 9x9 (Resumed & Optimized)")
     print("="*60)
     
-    game = Gomoku9x9()
+    if torch.cuda.is_available():
+        print(f"🚀 GPU Detected: {torch.cuda.get_device_name(0)}")
+        print(f"💾 VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
+    
+    # Use GomokuGPU for fast parallel self-play
+    game = GomokuGPU(board_size=9)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
-    if device.type == 'cuda':
-        print(f"GPU: {torch.cuda.get_device_name(0)}")
     print()
     
     # Create model
@@ -42,6 +45,7 @@ def main():
     args = {**TRAINING_CONFIG, **MCTS_CONFIG}
     
     # Create MCTS
+    # Signature: game, args, model
     mcts = MCTS(game, args, model)
     
     # Create evaluator

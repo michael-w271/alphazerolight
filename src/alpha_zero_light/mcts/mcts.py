@@ -41,7 +41,10 @@ class Node:
     def expand(self, policy):
         for action, prob in enumerate(policy):
             if prob > 0:
-                child_state = self.state.copy()
+                if isinstance(self.state, torch.Tensor):
+                    child_state = self.state.clone()
+                else:
+                    child_state = self.state.copy()
                 child_state = self.game.get_next_state(child_state, action, 1)
                 child_state = self.game.change_perspective(child_state, player=-1)
 
@@ -105,6 +108,55 @@ class MCTS:
         if num_searches is None:
             num_searches = self.args['num_searches']
             
+        # Try to use C++ implementation
+        try:
+            import alpha_zero_light.mcts.mcts_cpp as mcts_cpp
+            
+            # Initialize C++ MCTS if not already done or if args changed
+            if not hasattr(self, 'cpp_mcts'):
+                self.cpp_mcts = mcts_cpp.MCTS_CPP(
+                    self.game.board_size, 
+                    num_searches, 
+                    self.args['C']
+                )
+            
+            # Wrapper for model to handle numpy <-> tensor conversion
+            def model_wrapper(input_np):
+                # input_np is (B, 3, H, W) numpy array
+                input_tensor = torch.tensor(input_np, device=self.model.device, dtype=torch.float32)
+                
+                policies, values = self.model(input_tensor)
+                
+                policies_np = torch.softmax(policies, axis=1).cpu().numpy()
+                values_np = values.cpu().numpy()
+                
+                return policies_np, values_np
+            
+            # Run C++ search
+            # states is a list of (H, W) or (1, H, W) arrays. 
+            # C++ expects list of flat numpy arrays or similar.
+            # Our states from GomokuGPU are tensors (1, H, W).
+            # We need to convert them to numpy for C++.
+            
+            states_np = []
+            for s in states:
+                if isinstance(s, torch.Tensor):
+                    s = s.cpu().numpy()
+                states_np.append(s.flatten())
+                
+            cpp_results = self.cpp_mcts.search_batch(states_np, model_wrapper)
+            
+            # Convert list of lists to list of numpy arrays
+            action_probs = [np.array(probs) for probs in cpp_results]
+            return action_probs
+            
+        except ImportError:
+            # Fallback to Python implementation
+            pass
+        except Exception as e:
+            print(f"C++ MCTS failed, falling back to Python: {e}")
+            # Fallback
+            
         batch_size = len(states)
         roots = [Node(self.game, self.args, state, visit_count=0) for state in states]
         
@@ -134,7 +186,12 @@ class MCTS:
             
             if encoded_states:
                 # Batch inference
-                encoded_states_tensor = torch.tensor(np.array(encoded_states), device=self.model.device)
+                # encoded_states are already tensors on device (from GomokuGPU)
+                if isinstance(encoded_states[0], torch.Tensor):
+                    encoded_states_tensor = torch.cat(encoded_states, dim=0)
+                else:
+                    encoded_states_tensor = torch.tensor(np.array(encoded_states), device=self.model.device)
+                
                 policies, nn_values = self.model(encoded_states_tensor)
                 
                 policies = torch.softmax(policies, axis=1).cpu().numpy()
@@ -144,6 +201,9 @@ class MCTS:
                 for idx, policy, nn_value in zip(valid_indices, policies, nn_values):
                     node = nodes[idx]
                     valid_moves = self.game.get_valid_moves(node.state)
+                    if isinstance(valid_moves, torch.Tensor):
+                        valid_moves = valid_moves.cpu().numpy().flatten()
+                    
                     policy *= valid_moves
                     policy /= np.sum(policy)
                     

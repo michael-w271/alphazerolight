@@ -7,16 +7,16 @@ HIGH GPU UTILIZATION VERSION
 # Training Configuration
 TRAINING_CONFIG = {
     # Number of training iterations
-    'num_iterations': 100,
+    'num_iterations': 30,
     
     # Self-play games per iteration
-    'num_self_play_iterations': 200,
+    'num_self_play_iterations': 2048,
     
     # Training epochs per iteration
     'num_epochs': 10,
     
     # Batch size for training (INCREASED for GPU utilization)
-    'batch_size': 512,
+    'batch_size': 2048,
     
     # Temperature for exploration
     'temperature': 1.25,
