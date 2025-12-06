@@ -134,8 +134,8 @@ public:
     if (child->visit_count == 0) {
       return 10000.0f + child->prior; // High value for unvisited
     }
-    float q_value =
-        1.0f - ((child->value_sum / child->visit_count) + 1.0f) / 2.0f;
+    // Use actual Q-value (average reward), not inverted
+    float q_value = child->value_sum / child->visit_count;
     float u = c_puct * child->prior * std::sqrt((float)visit_count) /
               (1.0f + child->visit_count);
     return q_value + u;
