@@ -115,6 +115,38 @@ def load_model(game_name):
         game = Gomoku9x9()
         num_res_blocks = 15  # GPU test model
         num_hidden = 384
+    elif game_name == "Gomoku 30min":
+        # Our newly trained model!
+        from alpha_zero_light.game.gomoku_gpu import GomokuGPU
+        from alpha_zero_light.model.network import AlphaZeroNet
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        game = GomokuGPU(board_size=9, device=device)
+        model = AlphaZeroNet(game, num_res_blocks=9, num_hidden=256).to(device)
+        
+        # Load from our specific checkpoint directory
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_30min"
+        checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
+        
+        if checkpoints:
+            latest_checkpoint = checkpoints[-1]
+            try:
+                model.load_state_dict(torch.load(latest_checkpoint, map_location=device))
+                model.eval()
+                st.sidebar.success(f"✅ Loaded: {latest_checkpoint.name}")
+            except Exception as e:
+                st.sidebar.warning(f"⚠️ Could not load checkpoint: {e}")
+                st.sidebar.info("Using untrained model")
+        else:
+            st.sidebar.warning("⚠️ No checkpoint found, using untrained model")
+        
+        args = {
+            'C': 2,
+            'num_searches': 100,
+        }
+        
+        mcts = MCTS(game, model, args)
+        return game, model, mcts, device
+        
     else:  # Gomoku 15x15
         game = Gomoku()
         num_res_blocks = 8 
@@ -518,7 +550,7 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
+    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
     
     # Clear session state if game changes
     if 'current_game' not in st.session_state:
