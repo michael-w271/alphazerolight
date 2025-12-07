@@ -103,6 +103,32 @@ class AlphaZeroTrainer:
                     player = players[idx]
                     action_probs = action_probs_batch[j]
                     
+                    # 🔍 POLICY DIAGNOSTICS (log first game of each batch)
+                    if idx == 0 and len(active_indices) == batch_size:
+                        import math
+                        # Calculate entropy: H = -Σ(p * log(p))
+                        entropy = -sum(p * math.log(p + 1e-10) for p in action_probs if p > 0)
+                        max_entropy = math.log(self.game.action_size)
+                        
+                        # Check concentration
+                        sorted_probs = sorted(action_probs, reverse=True)
+                        top1 = sorted_probs[0]
+                        top3 = sum(sorted_probs[:3])
+                        
+                        # Count how many moves have >1% probability
+                        significant_moves = sum(1 for p in action_probs if p > 0.01)
+                        
+                        print(f"\n📊 POLICY TARGET DIAGNOSTIC (Game {idx+1}):")
+                        print(f"  Entropy: {entropy:.3f} / {max_entropy:.3f} ({entropy/max_entropy*100:.1f}%)")
+                        print(f"  Top-1: {top1:.3f}, Top-3: {top3:.3f}")
+                        print(f"  Significant moves (>1%): {significant_moves}/{self.game.action_size}")
+                        print(f"  Expected: Entropy <50%, Top-1 >30%, <20 significant moves")
+                        
+                        if entropy/max_entropy > 0.7:
+                            print(f"  ⚠️  TOO UNIFORM - Policy targets have no signal!")
+                        elif top1 > 0.5:
+                            print(f"  ✅ FOCUSED - Good policy signal")
+                    
                     # Store history - store squeezed (1, H, W) for MCTS compatibility
                     canonical_state = canonical_states[j].squeeze(0)  # (1, H, W)
                     game_histories[idx].append((canonical_state, action_probs, player))

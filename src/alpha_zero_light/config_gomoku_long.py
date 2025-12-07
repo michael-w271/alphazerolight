@@ -7,7 +7,7 @@ import torch
 
 # Training Configuration
 TRAINING_CONFIG = {
-    'num_iterations': 200,           # Max 200 iterations
+    'num_iterations': 5,             # Quick diagnostic test
     'num_self_play_iterations': 512,
     'num_epochs': 8,
     'batch_size': 256,
