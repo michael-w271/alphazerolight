@@ -12,8 +12,7 @@ src_dir = current_dir.parent.parent  # src/
 sys.path.insert(0, str(src_dir))
 
 from alpha_zero_light.game.tictactoe import TicTacToe
-from alpha_zero_light.game.gomoku import Gomoku
-from alpha_zero_light.game.gomoku_9x9 import Gomoku9x9
+from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 
@@ -107,30 +106,14 @@ def load_model(game_name, checkpoint_name=None):
         game = TicTacToe()
         num_res_blocks = 4
         num_hidden = 64
-    elif game_name == "Gomoku 9x9":
-        game = Gomoku9x9()
-        num_res_blocks = 4
+    elif game_name == "Connect Four":
+        game = ConnectFour()
+        num_res_blocks = 6
         num_hidden = 64
-    elif game_name == "Gomoku 9x9 GPU Test":
-        game = Gomoku9x9()
-        num_res_blocks = 15  # GPU test model
-        num_hidden = 384
-    elif game_name == "Gomoku Long":
-        # Currently training model - loads latest checkpoint
-        game = Gomoku9x9()
-        num_res_blocks = 9
-        num_hidden = 256
-        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_long"
-    elif game_name == "Gomoku Fixed":
-        # NEW: Fixed model with UCB + edge win fixes
-        game = Gomoku9x9()
-        num_res_blocks = 12
-        num_hidden = 384
-        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "gomoku_fixed"
-    else:  # Gomoku 15x15
-        game = Gomoku()
-        num_res_blocks = 8 
-        num_hidden = 128
+        checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "connect4"
+    else:
+        st.error(f"Unknown game: {game_name}")
+        return None, None, None
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -164,7 +147,7 @@ def load_model(game_name, checkpoint_name=None):
     
     args = {
         'C': 2,
-        'num_searches': 100 if game_name == "TicTacToe" else (200 if "9x9" in game_name else 400),
+        'num_searches': 100 if game_name == "TicTacToe" else (200 if game_name == "Connect Four" else 400),
     }
     
     mcts = MCTS(game, args, model)
@@ -340,7 +323,7 @@ def check_game_over(game, board, last_action):
                 return True, 0  # Draw
     return False, None
 
-def ai_move(game, mcts):
+def ai_move(game, mcts, game_name):
     """Make AI move"""
     if st.session_state.game_over:
         return
@@ -358,7 +341,14 @@ def ai_move(game, mcts):
     with st.spinner("AI is thinking..."):
         action_probs = mcts.search(ai_state_np)
     
-    st.session_state.last_ai_probs = action_probs.reshape(game.row_count, game.column_count)
+    # Store AI probabilities (Connect Four uses columns, others use full board)
+    if game_name == "Connect Four":
+        # For Connect Four, action_probs is per column (7), create a heatmap for top row
+        ai_probs_display = np.zeros((game.row_count, game.column_count))
+        ai_probs_display[0, :] = action_probs  # Show column probabilities in top row
+        st.session_state.last_ai_probs = ai_probs_display
+    else:
+        st.session_state.last_ai_probs = action_probs.reshape(game.row_count, game.column_count)
     
     # Get valid moves
     if hasattr(game, 'device'):  # GomokuGPU
@@ -393,16 +383,22 @@ def ai_move(game, mcts):
     else:
         st.session_state.current_player = game.get_opponent(st.session_state.current_player)
 
-def make_move(row, col, game, mcts):
+def make_move(row, col, game, mcts, game_name=""):
     """Handle human move"""
     if st.session_state.game_over:
         return
     
-    if st.session_state.board[row, col] != 0:
-        st.warning("⚠️ Cell already occupied!")
-        return
-    
-    action = row * game.column_count + col
+    # Connect Four: col is the action (pieces drop to lowest row)
+    if game_name == "Connect Four":
+        action = col
+        if st.session_state.board[0, col] != 0:
+            st.warning("⚠️ Column is full!")
+            return
+    else:
+        if st.session_state.board[row, col] != 0:
+            st.warning("⚠️ Cell already occupied!")
+            return
+        action = row * game.column_count + col
     
     # Make move
     if hasattr(game, 'device'):  # GomokuGPU
@@ -425,19 +421,29 @@ def make_move(row, col, game, mcts):
         return
     
     st.session_state.current_player = game.get_opponent(st.session_state.current_player)
-    ai_move(game, mcts)
+    ai_move(game, mcts, game_name)
 
 def render_board(board, game_name, key_prefix="game", on_click=None, disabled=False):
     """Render the game board"""
     rows, cols_count = board.shape
     
-    # Inject specific styles for this render
-    if game_name == "Gomoku":
-        # Force square aspect ratio and centering for Gomoku board
+    # Connect Four styling
+    if game_name == "Connect Four":
         st.markdown("""
         <style>
             .stButton button {
                 border-radius: 50%;
+                font-size: 32px !important;
+                height: 60px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    elif game_name == "TicTacToe":
+        st.markdown("""
+        <style>
+            .stButton button {
+                height: 80px !important;
+                font-size: 32px !important;
             }
         </style>
         """, unsafe_allow_html=True)
@@ -447,22 +453,20 @@ def render_board(board, game_name, key_prefix="game", on_click=None, disabled=Fa
         for col in range(cols_count):
             cell_value = board[row, col]
             
-            # Determine button help/label/type
+            # Determine button label
             if game_name == "TicTacToe":
                 display = get_cell_display(cell_value, game_name)
                 if cell_value == 1: label = f":blue[{display}]"
                 elif cell_value == -1: label = f":red[{display}]"
                 else: label = " "
-                help_text = None
+            elif game_name == "Connect Four":
+                if cell_value == 1: label = "🔴"  # Red for player
+                elif cell_value == -1: label = "🟡"  # Yellow for AI
+                else: label = "⚪"  # Empty
             else:
-                # Gomoku: Use empty label but rely on CSS injection via key or state? 
-                # Streamlit buttons are hard to style individually without custom components.
-                # We will use emoji/unicode for stones if CSS classes aren't easily applied per button.
-                # Actually, let's use the 'help' or just unicode circles.
                 if cell_value == 1: label = "⚫" 
                 elif cell_value == -1: label = "⚪"
                 else: label = " "
-                help_text = f"({row}, {col})"
 
             with cols[col]:
                 st.button(
@@ -471,8 +475,7 @@ def render_board(board, game_name, key_prefix="game", on_click=None, disabled=Fa
                     disabled=disabled or cell_value != 0,
                     use_container_width=True,
                     on_click=on_click,
-                    args=(row, col) if on_click else None,
-                    help=help_text
+                    args=(row, col) if on_click else None
                 )
 
 def play_game_ui(game, mcts, device, game_name):
@@ -483,8 +486,8 @@ def play_game_ui(game, mcts, device, game_name):
     # Sidebar info
     st.sidebar.markdown(f"""
     **How to Play:**
-    - You are **{'X (Blue)' if game_name == 'TicTacToe' else 'Black (●)'}**
-    - AI is **{'O (Red)' if game_name == 'TicTacToe' else 'White (○)'}**
+    - You are **{'X (Blue)' if game_name == 'TicTacToe' else ('🔴 Red' if game_name == 'Connect Four' else 'Black (●)')}**
+    - AI is **{'O (Red)' if game_name == 'TicTacToe' else ('🟡 Yellow' if game_name == 'Connect Four' else 'White (○)')}**
     - Click on empty cells to make your move
     - AI will respond automatically
     """)
@@ -504,9 +507,19 @@ def play_game_ui(game, mcts, device, game_name):
     else:
         status_class = "status-ongoing"
         if game_name == "TicTacToe":
-            current_symbol = "X" if st.session_state.current_player == 1 else "O"
+            current_symbol = "X"
+        elif game_name == "Connect Four":
+            current_symbol = "🔴"
         else:
-            current_symbol = "●" if st.session_state.current_player == 1 else "○"
+            current_symbol = "●"
+        
+        if st.session_state.current_player == -1:
+            if game_name == "TicTacToe":
+                current_symbol = "O"
+            elif game_name == "Connect Four":
+                current_symbol = "🟡"
+            else:
+                current_symbol = "○"
             
         current_name = "Your" if st.session_state.current_player == 1 else "AI's"
         status_text = f"🎯 {current_name} Turn ({current_symbol})"
@@ -605,7 +618,7 @@ def play_game_ui(game, mcts, device, game_name):
                         disabled=st.session_state.game_over or cell_value != 0 or st.session_state.current_player == -1,
                         use_container_width=True
                     ):
-                        make_move(row, col, game, mcts)
+                        make_move(row, col, game, mcts, game_name)
                         st.rerun()
     
     # New game button
@@ -712,7 +725,7 @@ def evolution_ui(game_name):
 
 def main():
     st.sidebar.title("Configuration")
-    game_name = st.sidebar.selectbox("Select Game", ["TicTacToe", "Gomoku 9x9", "Gomoku Fixed", "Gomoku Long", "Gomoku 30min", "Gomoku 9x9 GPU Test", "Gomoku 15x15"])
+    game_name = st.sidebar.selectbox("Select Game", ["Connect Four", "TicTacToe"])
     
     # Checkpoint selector - get available checkpoints
     checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / game_name.lower().replace(" ", "_")
