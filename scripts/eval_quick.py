@@ -7,9 +7,10 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from alpha_zero_light.game.gomoku_9x9 import Gomoku9x9
+from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
+from alpha_zero_light.config_connect4 import PATHS, MODEL_CONFIG
 import torch
 import numpy as np
 
@@ -18,7 +19,7 @@ def play_game(game, mcts_player, random_player=True):
     state = game.get_initial_state()
     player = 1  # AI starts
     
-    for _ in range(81):  # Max moves
+    for _ in range(42):  # Max moves for 6x7 board
         if player == 1:
             # AI move
             action_probs = mcts_player.search(state)
@@ -44,7 +45,7 @@ def play_game(game, mcts_player, random_player=True):
     return 0  # Draw
 
 def main():
-    checkpoint_dir = Path("checkpoints/gomoku_large")
+    checkpoint_dir = Path(PATHS.checkpoints)
     checkpoints = sorted(checkpoint_dir.glob("model_*.pt"))
     
     if not checkpoints:
@@ -57,8 +58,10 @@ def main():
     
     # Load model
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    game = Gomoku9x9()
-    model = ResNet(game, num_res_blocks=15, num_hidden=512).to(device)
+    game = ConnectFour()
+    model = ResNet(game, 
+                   num_res_blocks=MODEL_CONFIG['num_res_blocks'], 
+                   num_hidden=MODEL_CONFIG['num_hidden']).to(device)
     model.load_state_dict(torch.load(latest, map_location=device))
     model.eval()
     

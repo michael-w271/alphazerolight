@@ -1,7 +1,7 @@
 #!/bin/bash
-# Pause Gomoku training
+# Pause Connect Four training
 
-PID=$(pgrep -f "train_gomoku.py")
+PID=$(pgrep -f "train_connect4.py")
 
 if [ -z "$PID" ]; then
     echo "❌ No training process found"

@@ -8,25 +8,18 @@ from pathlib import Path
 # Add src to python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-from alpha_zero_light.config_gomoku_30min import PATHS as PATHS_30MIN
-from alpha_zero_light.config_gomoku_9x9_overnight import PATHS as PATHS_OVERNIGHT
-from alpha_zero_light.config_gomoku_9x9 import PATHS as PATHS_9X9
+from alpha_zero_light.config_connect4 import PATHS, TRAINING_CONFIG
 
 def get_latest_history():
-    # Check all locations
-    paths = [
-        Path(PATHS_9X9['checkpoints']) / 'training_history.json',
-        Path(PATHS_30MIN['checkpoints']) / 'training_history.json',
-        Path(PATHS_OVERNIGHT['checkpoints']) / 'training_history.json'
-    ]
+    # Check Connect Four checkpoint location
+    history_path = Path(PATHS.checkpoints) / 'training_history.json'
     
-    for p in paths:
-        if p.exists():
-            try:
-                with open(p, 'r') as f:
-                    return json.load(f), p.parent
-            except:
-                continue
+    if history_path.exists():
+        try:
+            with open(history_path, 'r') as f:
+                return json.load(f), history_path.parent
+        except:
+            pass
     return None, None
 
 def update_status():
@@ -34,7 +27,7 @@ def update_status():
     
     status = {
         'current_iteration': 0,
-        'total_iterations': 0, # Unknown until we know which config
+        'total_iterations': TRAINING_CONFIG['num_iterations'],
         'current_loss': 0,
         'current_win_rate': 0,
         'eta': 'Calculating...',
@@ -49,14 +42,6 @@ def update_status():
         
         if history['eval_win_rate']:
             status['current_win_rate'] = history['eval_win_rate'][-1]
-            
-        # Try to guess total iterations based on path
-        if '30min' in str(checkpoint_dir):
-            status['total_iterations'] = 6
-        elif 'overnight' in str(checkpoint_dir):
-            status['total_iterations'] = 30
-        else:
-            status['total_iterations'] = 200 # Standard 9x9 config
             
     # Write to website directory
     website_dir = Path(os.path.join(os.path.dirname(__file__), '../website'))

@@ -15,28 +15,46 @@ class Evaluator:
         Play a single game. Model plays as model_player, random plays as opponent.
         Returns: 1 if model wins, -1 if random wins, 0 if draw
         """
-        state = self.game.get_initial_state(1).squeeze(0)  # Get single game state
+        # Check if game uses tensors (has .device) or numpy
+        uses_tensors = hasattr(self.game, 'device')
+        
+        if uses_tensors:
+            state = self.game.get_initial_state(1).squeeze(0)  # Get single game state
+        else:
+            state = self.game.get_initial_state()  # Numpy-based game
+        
         player = 1
         
         while True:
             if player == model_player:
                 # Model's turn - use MCTS
-                neutral_state = self.game.change_perspective(state.unsqueeze(0), player).squeeze(0)
+                if uses_tensors:
+                    neutral_state = self.game.change_perspective(state.unsqueeze(0), player).squeeze(0)
+                else:
+                    neutral_state = self.game.change_perspective(state, player)
                 action_probs = self.mcts.search(neutral_state)
                 action = np.argmax(action_probs)
             else:
                 # Random player's turn
-                valid_moves = self.game.get_valid_moves(state.unsqueeze(0))
-                # Convert to numpy if needed
-                if hasattr(valid_moves, 'cpu'):
-                    valid_moves = valid_moves.cpu().numpy().flatten()
+                if uses_tensors:
+                    valid_moves = self.game.get_valid_moves(state.unsqueeze(0))
+                    if hasattr(valid_moves, 'cpu'):
+                        valid_moves = valid_moves.cpu().numpy().flatten()
+                else:
+                    valid_moves = self.game.get_valid_moves(state)
                 action = np.random.choice(self.game.action_size, p=valid_moves / np.sum(valid_moves))
             
-            state = self.game.get_next_state(state.unsqueeze(0), 
-                                            torch.tensor([action], device=self.game.device),
-                                            torch.tensor([player], device=self.game.device, dtype=torch.float32)).squeeze(0)
-            value, is_terminal = self.game.get_value_and_terminated(state.unsqueeze(0), 
-                                                                                    torch.tensor([action], device=self.game.device))
+            # Get next state
+            if uses_tensors:
+                state = self.game.get_next_state(state.unsqueeze(0), 
+                                                torch.tensor([action], device=self.game.device),
+                                                torch.tensor([player], device=self.game.device, dtype=torch.float32)).squeeze(0)
+                value, is_terminal = self.game.get_value_and_terminated(state.unsqueeze(0), 
+                                                                        torch.tensor([action], device=self.game.device))
+            else:
+                state = self.game.get_next_state(state, action, player)
+                value, is_terminal = self.game.get_value_and_terminated(state, action)
+            
             # Convert to Python types
             if hasattr(value, 'item'):
                 value = value.item()
