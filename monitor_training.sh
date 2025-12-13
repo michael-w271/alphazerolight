@@ -1,12 +1,12 @@
 #!/bin/bash
 # Live training monitor with auto-refresh
 
-echo "🎮 Gomoku 9x9 Training Monitor"
+echo "🎮 Connect Four Training Monitor"
 echo "================================"
 echo ""
 
 # Check if training is running
-PID=$(pgrep -f "train_gomoku_9x9_overnight.py")
+PID=$(pgrep -f "train_connect4.py")
 
 if [ -z "$PID" ]; then
     echo "❌ No training process found"
@@ -24,8 +24,8 @@ echo ""
 
 # Show latest training progress
 echo "📈 Latest Progress:"
-tail -n 25 training_log_overnight.txt | grep -E "(Iteration|Generated|Loss|Win Rate|complete)" | tail -n 10
+tail -n 25 training_log.txt | grep -E "(Iteration|Generated|Loss|Win Rate|complete)" | tail -n 10
 
 echo ""
 echo "💡 Run './check_training.sh' for updates"
-echo "💡 Or: tail -f training_log_overnight.txt"
+echo "💡 Or: tail -f training_log.txt"

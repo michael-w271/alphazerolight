@@ -8,9 +8,10 @@ from pathlib import Path
 # Add src to python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-from alpha_zero_light.game.tictactoe import TicTacToe
+from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
+from alpha_zero_light.config_connect4 import PATHS, MODEL_CONFIG
 
 def get_random_action(game, state):
     valid_moves = game.get_valid_moves(state)
@@ -61,10 +62,10 @@ def play_game(game, model, args, device):
 
 def main():
     print("Generating evolution replay...")
-    game = TicTacToe()
+    game = ConnectFour()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    checkpoint_dir = Path('checkpoints')
+    checkpoint_dir = Path(PATHS.checkpoints)
     # Sort by iteration number
     checkpoints = sorted(checkpoint_dir.glob('model_*.pt'), key=lambda x: int(x.stem.split('_')[1]))
     
@@ -79,7 +80,9 @@ def main():
         iteration = int(cp.stem.split('_')[1])
         print(f"Processing iteration {iteration}...")
         
-        model = ResNet(game, 4, 64).to(device)
+        model = ResNet(game, 
+                      num_res_blocks=MODEL_CONFIG['num_res_blocks'], 
+                      num_hidden=MODEL_CONFIG['num_hidden']).to(device)
         model.load_state_dict(torch.load(cp, map_location=device))
         model.eval()
         
@@ -93,7 +96,7 @@ def main():
             'result': result # 1 (AI won), -1 (AI lost), 0 (Draw)
         })
         
-    output_path = Path('docs/evolution_replay.json')
+    output_path = Path('docs/connect4_evolution_replay.json')
     output_path.parent.mkdir(exist_ok=True)
     
     with open(output_path, 'w') as f:

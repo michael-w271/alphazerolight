@@ -5,8 +5,8 @@ import json
 import sys
 from pathlib import Path
 from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
 import os
+
 
 class AlphaZeroTrainer:
     def __init__(self, model, optimizer, game, args, mcts, evaluator=None):
@@ -397,13 +397,15 @@ class AlphaZeroTrainer:
                 # Self-play with progress bar
                 self.model.eval()
                 print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
-                print(f"   - Batch Size: {self.args.get('batch_size', 'Auto')}")
+                print(f"   - GPU-accelerated MCTS with batched inference")
                 print(f"   - Device: {self.model.device}")
                 sys.stdout.flush()
                 
-                # Run parallel self-play
-                # We use a large batch size for efficiency
-                memory = self.parallel_self_play(self.args['num_self_play_iterations'])
+                # Simple sequential self-play - speed comes from GPU batching in MCTS
+                memory = []
+                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play games", unit="game"):
+                    game_memory = self.self_play()
+                    memory.extend(game_memory)
                 
                 print(f"✅ Generated {len(memory)} training samples")
                 sys.stdout.flush()

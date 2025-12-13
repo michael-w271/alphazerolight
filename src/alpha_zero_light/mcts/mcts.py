@@ -69,46 +69,87 @@ class MCTS:
     @torch.no_grad()
     def search(self, state, add_noise=True, temperature=None):
         """
-        MCTS search from given state.
-        add_noise: Add Dirichlet noise at root for exploration
-        temperature: Temperature for action selection (if None, uses config)
+        MCTS search with GPU-optimized batched inference.
+        Collects multiple leaf nodes and evaluates them together for better GPU utilization.
         """
         root = Node(self.game, self.args, state, visit_count=0)
         
-        for i in range(self.args['num_searches']):
-            node = root
+        # Batch size for neural network inference - small batches for low search counts
+        batch_size = min(8, self.args['num_searches'])
+        
+        for batch_start in range(0, self.args['num_searches'], batch_size):
+            batch_end = min(batch_start + batch_size, self.args['num_searches'])
+            current_batch_size = batch_end - batch_start
             
-            while node.is_fully_expanded():
-                node = node.select()
-                
-            value, is_terminal = self.game.get_value_and_terminated(node.state, node.action_taken)
-            value = self.game.get_opponent_value(value)
+            # Collect leaf nodes for this batch
+            leaf_nodes = []
+            for _ in range(current_batch_size):
+                node = root
+                while node.is_fully_expanded():
+                    node = node.select()
+                leaf_nodes.append(node)
             
-            if not is_terminal:
-                policy, value = self.model(
-                    torch.tensor(self.game.get_encoded_state(node.state), device=self.model.device).unsqueeze(0)
-                )
-                policy = torch.softmax(policy, axis=1).squeeze(0).cpu().numpy()
-                valid_moves = self.game.get_valid_moves(node.state)
-                policy *= valid_moves
-                policy /= np.sum(policy)
+            # Separate terminal and non-terminal nodes
+            non_terminal_nodes = []
+            non_terminal_states = []
+            
+            for node in leaf_nodes:
+                value, is_terminal = self.game.get_value_and_terminated(node.state, node.action_taken)
+                if is_terminal:
+                    # Terminal node - backpropagate immediately
+                    value = self.game.get_opponent_value(value)
+                    node.backpropagate(value)
+                else:
+                    non_terminal_nodes.append(node)
+                    non_terminal_states.append(self.game.get_encoded_state(node.state))
+            
+            # Batch evaluate non-terminal nodes on GPU
+            if non_terminal_nodes:
+                states_tensor = torch.tensor(np.array(non_terminal_states), 
+                                            dtype=torch.float32, 
+                                            device=self.model.device)
                 
-                # Add Dirichlet noise at root node for exploration
-                if node == root and add_noise:
-                    noise = np.random.dirichlet([self.args.get('dirichlet_alpha', 0.3)] * len(policy))
-                    epsilon = self.args.get('dirichlet_epsilon', 0.25)
-                    policy = (1 - epsilon) * policy + epsilon * noise
+                with torch.no_grad():
+                    policies, values = self.model(states_tensor)
+                    policies = torch.softmax(policies, dim=1).cpu().numpy()
+                    values = values.cpu().numpy().flatten()
                 
-                value = value.item()
-                
-                node.expand(policy)
-                
-            node.backpropagate(value)    
+                # Expand and backpropagate for each non-terminal node
+                for idx, node in enumerate(non_terminal_nodes):
+                    policy = policies[idx]
+                    value = values[idx]
+                    
+                    # Mask invalid moves
+                    valid_moves = self.game.get_valid_moves(node.state)
+                    policy *= valid_moves
+                    policy_sum = np.sum(policy)
+                    if policy_sum > 0:
+                        policy /= policy_sum
+                    else:
+                        policy = valid_moves / np.sum(valid_moves)
+                    
+                    # Add Dirichlet noise only at root
+                    if node == root and add_noise:
+                        noise = np.random.dirichlet([self.args.get('dirichlet_alpha', 0.3)] * len(policy))
+                        epsilon = self.args.get('dirichlet_epsilon', 0.25)
+                        policy = (1 - epsilon) * policy + epsilon * noise
+                        policy *= valid_moves
+                        policy /= np.sum(policy)
+                    
+                    node.expand(policy)
+                    node.backpropagate(value)    
             
         # Return action probabilities based on visit counts
         action_probs = np.zeros(self.game.action_size)
         for child in root.children:
             action_probs[child.action_taken] = child.visit_count
+            
+        # Ensure we have valid probabilities
+        if np.sum(action_probs) == 0:
+            # No visits - return uniform over valid moves
+            valid_moves = self.game.get_valid_moves(root.state)
+            action_probs = valid_moves / np.sum(valid_moves)
+            return action_probs
             
         # Apply temperature for action selection
         if temperature is None:
@@ -116,8 +157,9 @@ class MCTS:
             
         if temperature == 0:
             # Argmax (deterministic)
+            best_action = np.argmax(action_probs)
             action_probs = np.zeros_like(action_probs)
-            action_probs[np.argmax(action_probs)] = 1
+            action_probs[best_action] = 1
         else:
             # Temperature-based sampling
             action_probs = action_probs ** (1.0 / temperature)

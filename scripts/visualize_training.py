@@ -8,8 +8,14 @@ import numpy as np
 from pathlib import Path
 import sys
 
-def load_history(checkpoint_dir='checkpoints'):
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+from alpha_zero_light.config_connect4 import PATHS
+
+def load_history(checkpoint_dir=None):
     """Load training history from JSON file"""
+    if checkpoint_dir is None:
+        checkpoint_dir = PATHS.checkpoints
     history_path = Path(checkpoint_dir) / 'training_history.json'
     
     if not history_path.exists():
@@ -22,8 +28,10 @@ def load_history(checkpoint_dir='checkpoints'):
     
     return history
 
-def plot_training_metrics(history, output_dir='docs/training_plots'):
+def plot_training_metrics(history, output_dir=None):
     """Generate and save training plots"""
+    if output_dir is None:
+        output_dir = PATHS.plots
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     

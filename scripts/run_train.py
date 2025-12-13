@@ -5,19 +5,19 @@ import os
 # Add src to python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-from alpha_zero_light.game.tictactoe import TicTacToe
+from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 from alpha_zero_light.training.trainer import AlphaZeroTrainer
 from alpha_zero_light.training.evaluator import Evaluator
-from alpha_zero_light.config import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG
+from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS
 
 def main():
     print("="*60)
-    print("AlphaZero Light - Tic-Tac-Toe Training")
+    print("AlphaZero Light - Connect Four Training")
     print("="*60)
     
-    game = TicTacToe()
+    game = ConnectFour()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
@@ -61,10 +61,10 @@ def main():
     print()
     
     # Start training
-    history = trainer.learn(checkpoint_dir='checkpoints')
+    history = trainer.learn(checkpoint_dir=PATHS.checkpoints)
     
-    print("\nTraining history saved to: checkpoints/training_history.json")
-    print("Checkpoints saved to: checkpoints/")
+    print(f"\nTraining history saved to: {PATHS.checkpoints}/training_history.json")
+    print(f"Checkpoints saved to: {PATHS.checkpoints}/")
     print("\nTo visualize training progress, run:")
     print("  python scripts/visualize_training.py")
 

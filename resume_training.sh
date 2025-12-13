@@ -1,10 +1,10 @@
 #!/bin/bash
-# Resume Gomoku training (or start fresh if no checkpoints exist)
+# Resume Connect Four training (or start fresh if no checkpoints exist)
 
 source ./env_config.sh
 
-echo "🚀 Starting/Resuming Gomoku training..."
-$PYTHON_EXEC scripts/train_gomoku.py > training_log.txt 2>&1 &
+echo "🚀 Starting/Resuming Connect Four training..."
+$PYTHON_EXEC scripts/train_connect4.py > training_log.txt 2>&1 &
 
 PID=$!
 echo "✅ Training started in background (PID: $PID)"
