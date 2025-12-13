@@ -6,6 +6,73 @@ import sys
 from pathlib import Path
 from tqdm import tqdm
 import os
+import multiprocessing as mp
+from functools import partial
+import time
+from alpha_zero_light.training.heuristic_opponent import HeuristicOpponent
+
+
+def _worker_self_play_games(args):
+    """Worker function for parallel self-play (must be at module level for pickling)"""
+    num_games, temperature, model_state, game_type, row_count, column_count, train_args = args
+    
+    # Import here to avoid issues
+    from alpha_zero_light.model.network import ResNet
+    from alpha_zero_light.mcts.mcts import MCTS
+    
+    # Recreate game
+    if game_type == "ConnectFour":
+        from alpha_zero_light.game.connect_four import ConnectFour
+        game = ConnectFour(row_count=row_count, column_count=column_count, win_length=4)
+    elif game_type == "TicTacToe":
+        from alpha_zero_light.game.tictactoe import TicTacToe
+        game = TicTacToe()
+    else:
+        raise ValueError(f"Unknown game type: {game_type}")
+    
+    # Recreate model
+    model = ResNet(game, 
+                  num_res_blocks=train_args.get('num_res_blocks', 10),
+                  num_hidden=train_args.get('num_hidden', 128))
+    model.load_state_dict(model_state)
+    model.eval()
+    
+    # Create MCTS
+    mcts = MCTS(game, train_args, model)
+    
+    # Play games
+    worker_memory = []
+    for _ in range(num_games):
+        game_memory = []
+        player = 1
+        state = game.get_initial_state()
+        
+        while True:
+            neutral_state = game.change_perspective(state, player)
+            action_probs = mcts.search(neutral_state)
+            
+            game_memory.append((neutral_state, action_probs, player))
+            
+            temp_action_probs = action_probs ** (1 / temperature)
+            temp_action_probs /= np.sum(temp_action_probs)
+            action = np.random.choice(game.action_size, p=temp_action_probs)
+            
+            state = game.get_next_state(state, action, player)
+            value, is_terminal = game.get_value_and_terminated(state, action)
+            
+            if is_terminal:
+                for hist_state, hist_probs, hist_player in game_memory:
+                    hist_outcome = value if hist_player == player else game.get_opponent_value(value)
+                    worker_memory.append((
+                        game.get_encoded_state(hist_state),
+                        hist_probs,
+                        hist_outcome
+                    ))
+                break
+            
+            player = game.get_opponent(player)
+    
+    return worker_memory
 
 
 class AlphaZeroTrainer:
@@ -16,6 +83,7 @@ class AlphaZeroTrainer:
         self.args = args
         self.mcts = mcts
         self.evaluator = evaluator
+        self.heuristic_opponent = HeuristicOpponent(game)
         
         # Training history
         self.history = {
@@ -26,13 +94,100 @@ class AlphaZeroTrainer:
             'eval_win_rate': [],
             'eval_wins': [],
             'eval_losses': [],
-            'eval_draws': [],
+            'eval_draws': []
         }
+        self.initial_lr = optimizer.param_groups[0]['lr']
 
-    def self_play(self):
+    def _get_temperature(self, iteration):
+        """Get temperature for current iteration based on schedule"""
+        if 'temperature_schedule' in self.args:
+            for schedule_entry in self.args['temperature_schedule']:
+                if iteration < schedule_entry['until_iteration']:
+                    return schedule_entry['temperature']
+            # Return last temperature if beyond all schedules
+            return self.args['temperature_schedule'][-1]['temperature']
+        else:
+            return self.args.get('temperature', 1.0)
+    
+    def _apply_learning_rate_schedule(self, iteration):
+        """Apply learning rate schedule if configured"""
+        if 'learning_rate_schedule' in self.args:
+            for schedule_entry in self.args['learning_rate_schedule']:
+                if iteration == schedule_entry['at_iteration']:
+                    new_lr = self.initial_lr * schedule_entry['factor']
+                    for param_group in self.optimizer.param_groups:
+                        param_group['lr'] = new_lr
+                    print(f"📉 Learning rate adjusted to {new_lr:.6f}")
+                    sys.stdout.flush()
+                    # Update initial_lr for cumulative decay
+                    self.initial_lr = new_lr
+                    break
+
+    def self_play_vs_random(self, temperature=None, use_heuristic=False):
+        """
+        Play game where model is player 1 and opponent is player -1.
+        
+        Args:
+            temperature: Temperature for move selection
+            use_heuristic: If True, opponent uses 1-ply heuristic. If False, pure random.
+        
+        This provides clean value targets during warmup phase.
+        """
+        memory = []
+        model_player = 1  # Model always plays as player 1
+        player = 1
+        state = self.game.get_initial_state()
+        
+        if temperature is None:
+            temperature = self.args.get('temperature', 1.0)
+        
+        while True:
+            if player == model_player:
+                # Model's turn - use MCTS
+                neutral_state = self.game.change_perspective(state, player)
+                action_probs = self.mcts.search(neutral_state)
+                
+                memory.append((neutral_state, action_probs, player))
+                
+                temperature_action_probs = action_probs ** (1 / temperature)
+                temperature_action_probs /= np.sum(temperature_action_probs)
+                action = np.random.choice(self.game.action_size, p=temperature_action_probs)
+            else:
+                # Opponent's turn
+                if use_heuristic:
+                    # 1-ply heuristic: win if possible, block if necessary, else random
+                    action = self.heuristic_opponent.get_action(state, player)
+                else:
+                    # Pure random
+                    valid_moves = self.game.get_valid_moves(state)
+                    valid_actions = np.where(valid_moves == 1)[0]
+                    action = np.random.choice(valid_actions)
+            
+            state = self.game.get_next_state(state, action, player)
+            value, is_terminal = self.game.get_value_and_terminated(state, action)
+            
+            if is_terminal:
+                return_memory = []
+                for hist_neutral_state, hist_action_probs, hist_player in memory:
+                    # Value from model's perspective
+                    hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
+                    return_memory.append((
+                        self.game.get_encoded_state(hist_neutral_state),
+                        hist_action_probs,
+                        hist_outcome
+                    ))
+                return return_memory
+            
+            player = self.game.get_opponent(player)
+
+    def self_play(self, temperature=None):
         memory = []
         player = 1
         state = self.game.get_initial_state()
+        
+        # Use provided temperature or fall back to config
+        if temperature is None:
+            temperature = self.args.get('temperature', 1.0)
         
         while True:
             neutral_state = self.game.change_perspective(state, player)
@@ -40,7 +195,7 @@ class AlphaZeroTrainer:
             
             memory.append((neutral_state, action_probs, player))
             
-            temperature_action_probs = action_probs ** (1 / self.args['temperature'])
+            temperature_action_probs = action_probs ** (1 / temperature)
             temperature_action_probs /= np.sum(temperature_action_probs)
             action = np.random.choice(self.game.action_size, p=temperature_action_probs)
             
@@ -60,6 +215,46 @@ class AlphaZeroTrainer:
                 return return_memory
             
             player = self.game.get_opponent(player)
+    
+    def _parallel_self_play_multicore(self, num_workers, temperature):
+        """Run self-play games in parallel across multiple CPU cores"""
+        games_per_worker = self.args['num_self_play_iterations'] // num_workers
+        remainder = self.args['num_self_play_iterations'] % num_workers
+        
+        # Get model state for workers (CPU only to avoid CUDA issues)
+        device_backup = self.model.device if hasattr(self.model, 'device') else None
+        cpu_model = self.model.cpu()
+        model_state = cpu_model.state_dict()
+        
+        # Prepare worker arguments
+        worker_tasks = [
+            (games_per_worker + (1 if i < remainder else 0), temperature, model_state, 
+             type(self.game).__name__, self.game.row_count if hasattr(self.game, 'row_count') else None,
+             self.game.column_count if hasattr(self.game, 'column_count') else None, 
+             self.args)
+            for i in range(num_workers)
+        ]
+        
+        # Run parallel workers
+        ctx = mp.get_context('spawn')  # Use spawn to avoid CUDA fork issues
+        with ctx.Pool(processes=num_workers) as pool:
+            results = list(tqdm(
+                pool.imap_unordered(_worker_self_play_games, worker_tasks),
+                total=num_workers,
+                desc="Worker completion",
+                unit="worker"
+            ))
+        
+        # Restore model to original device
+        if device_backup:
+            self.model = cpu_model.to(device_backup)
+        
+        # Combine results
+        all_memory = []
+        for worker_memory in results:
+            all_memory.extend(worker_memory)
+        
+        return all_memory
     
     def parallel_self_play(self, num_games):
         """
@@ -309,10 +504,6 @@ class AlphaZeroTrainer:
             sample = memory[batch_idx:min(len(memory), batch_idx + self.args['batch_size'])]
             states, policy_targets, value_targets = zip(*sample)
             
-            # Debug: print first state shape
-            if batch_idx == 0:
-                print(f"DEBUG: First state type: {type(states[0])}, shape: {states[0].shape if hasattr(states[0], 'shape') else 'N/A'}")
-            
             # Stack tensors instead of using numpy
             # states are already tensors (3, H, W), stack to (B, 3, H, W)
             state = torch.stack([s if isinstance(s, torch.Tensor) else torch.tensor(s, dtype=torch.float32) 
@@ -328,7 +519,11 @@ class AlphaZeroTrainer:
             
             policy_loss = torch.nn.functional.cross_entropy(out_policy, policy_targets)
             value_loss = torch.nn.functional.mse_loss(out_value, value_targets)
-            loss = policy_loss + value_loss
+            
+            # Weight value loss more heavily to balance with policy loss
+            # Cross entropy naturally has larger magnitude than MSE
+            value_weight = self.args.get('value_loss_weight', 1.0)
+            loss = policy_loss + value_weight * value_loss
             
             self.optimizer.zero_grad()
             loss.backward()
@@ -394,17 +589,62 @@ class AlphaZeroTrainer:
                 print(f"{'='*60}")
                 sys.stdout.flush()
                 
+                # Get temperature for this iteration
+                temperature = self._get_temperature(iteration)
+                
+                # Apply learning rate schedule if configured
+                self._apply_learning_rate_schedule(iteration)
+                
+                # Determine if we're in warmup phase (playing vs opponent)
+                random_opponent_iters = self.args.get('random_opponent_iterations', 0)
+                in_warmup_phase = iteration < random_opponent_iters
+                
+                # Progressive difficulty in warmup phase
+                use_heuristic = False
+                if in_warmup_phase:
+                    # Iterations 0-9: Pure random
+                    # Iterations 10-19: Heuristic opponent (block/win)
+                    # Iterations 20-29: Mix (50% heuristic, 50% random per game)
+                    if iteration >= 20:
+                        use_heuristic = (np.random.random() < 0.5)  # 50% chance
+                    elif iteration >= 10:
+                        use_heuristic = True  # Always heuristic
+                    else:
+                        use_heuristic = False  # Always random
+                
                 # Self-play with progress bar
                 self.model.eval()
-                print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
-                print(f"   - GPU-accelerated MCTS with batched inference")
-                print(f"   - Device: {self.model.device}")
+                
+                if in_warmup_phase:
+                    if iteration < 10:
+                        opponent_desc = "Pure Random"
+                    elif iteration < 20:
+                        opponent_desc = "1-ply Heuristic (blocks threats)"
+                    else:
+                        opponent_desc = "Mixed (50% heuristic, 50% random)"
+                    
+                    print(f"🎮 WARMUP PHASE: Playing vs {opponent_desc} ({self.args['num_self_play_iterations']} games)...")
+                    print(f"   - Model plays as Player 1, Opponent as Player -1")
+                    print(f"   - Progress: {iteration + 1}/{random_opponent_iters} warmup iterations")
+                else:
+                    print(f"🎮 Starting self-play ({self.args['num_self_play_iterations']} games)...")
+                    print(f"   - Model vs Model (standard AlphaZero)")
+                
+                print(f"   - MCTS searches: {self.args.get('num_searches', 50)}")
+                print(f"   - Temperature: {temperature:.2f}")
                 sys.stdout.flush()
                 
-                # Simple sequential self-play - speed comes from GPU batching in MCTS
+                # Sequential self-play with GPU batching for speed
                 memory = []
                 for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play games", unit="game"):
-                    game_memory = self.self_play()
+                    if in_warmup_phase:
+                        # Decide per-game if using heuristic (for mixed phase)
+                        game_use_heuristic = use_heuristic
+                        if iteration >= 20:  # Mixed phase
+                            game_use_heuristic = (np.random.random() < 0.5)
+                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=game_use_heuristic)
+                    else:
+                        game_memory = self.self_play(temperature=temperature)
                     memory.extend(game_memory)
                 
                 print(f"✅ Generated {len(memory)} training samples")
