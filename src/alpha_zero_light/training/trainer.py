@@ -738,7 +738,7 @@ class AlphaZeroTrainer:
                 # Sequential self-play (parallel had multiprocessing issues with CUDA)
                 memory = []
                 
-                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80):
+                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80, mininterval=10.0):
                     # Determine game type based on warmup phase
                     warmup_third = random_opponent_iters // 3
                     warmup_two_thirds = 2 * warmup_third
@@ -784,8 +784,8 @@ class AlphaZeroTrainer:
                 print(f"🧠 Training neural network ({self.args['num_epochs']} epochs)...")
                 sys.stdout.flush()
                 
-                # Disable tqdm progress bar to reduce prints (show only final result)
-                for epoch in range(self.args['num_epochs']):
+                # Show epoch progress with tqdm
+                for epoch in tqdm(range(self.args['num_epochs']), desc="Training", ncols=80, mininterval=10.0):
                     loss, policy_loss, value_loss = self.train(memory)
                     epoch_losses.append(loss)
                     epoch_policy_losses.append(policy_loss)
