@@ -7,17 +7,17 @@ from dataclasses import dataclass
 
 # Training Configuration
 TRAINING_CONFIG = {
-    'num_iterations': 200,              # Extended: 120 warmup + 80 self-play
-    'num_self_play_iterations': 400,    # Fewer games per iteration for faster feedback
+    'num_iterations': 200,              # Optimized: 100 warmup + 100 self-play
+    'num_self_play_iterations': 400,    # Games per iteration
     'num_epochs': 50,                   # Training epochs per iteration
     'batch_size': 512,                  # Batch size for neural network training
-    'temperature_schedule': [           # Longer exploration phase
-        {'until_iteration': 60, 'temperature': 1.25},
-        {'until_iteration': 120, 'temperature': 1.0},
+    'temperature_schedule': [           # Exploration schedule
+        {'until_iteration': 40, 'temperature': 1.25},
+        {'until_iteration': 100, 'temperature': 1.0},
         {'until_iteration': 160, 'temperature': 0.75}
     ],
     'value_loss_weight': 2.0,           # Weight value loss more heavily
-    'random_opponent_iterations': 120,  # EXTENDED WARMUP: 0-39 random, 40-79 heuristic, 80-119 mixed+tactical
+    'random_opponent_iterations': 100,  # OPTIMIZED WARMUP: 0-19 random, 20-59 heuristic, 60-99 mixed+tactical+aggressive
     'eval_frequency': 10,               
     'num_eval_games': 20,               
     'dirichlet_epsilon': 0.25,          
