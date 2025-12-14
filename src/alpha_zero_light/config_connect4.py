@@ -19,7 +19,7 @@ TRAINING_CONFIG = {
         {'until_iteration': 160, 'temperature': 0.75}
     ],
     'value_loss_weight': 2.0,           # Weight value loss more heavily
-    'random_opponent_iterations': 100,  # OPTIMIZED WARMUP: 0-19 random, 20-59 heuristic, 60-99 mixed+tactical+aggressive
+    'random_opponent_iterations': 115,  # EXTENDED: 0-27 random, 28-54 heuristic, 55-84 mixed, 85-114 strong+mixed
     'eval_frequency': 10,               
     'num_eval_games': 20,               
     'dirichlet_epsilon': 0.25,          

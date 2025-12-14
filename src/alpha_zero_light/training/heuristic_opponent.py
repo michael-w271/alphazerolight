@@ -156,3 +156,111 @@ class HeuristicOpponent:
                 return True
         
         return False
+
+    def get_action_strong(self, state, player):
+        """
+        Strong 2-ply opponent with center opening preference.
+        
+        Strategy:
+        1. Always open center (column 3) if first move
+        2. If I can win, do it
+        3. If opponent can win, block it
+        4. Use 2-ply lookahead to find moves that create forcing sequences
+        5. Prefer center columns otherwise
+        
+        This provides stronger opposition in later warmup phases.
+        """
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        if len(valid_actions) == 0:
+            raise ValueError("No valid moves available")
+        
+        # 1. Always open center if board is empty
+        if np.all(state == 0):
+            center = self.game.column_count // 2
+            if center in valid_actions:
+                return center
+        
+        # 2. Check if we can win immediately
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 3. Check if opponent can win (must block)
+        opponent = -player
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, opponent)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 4. 2-ply lookahead: find moves that create multiple threats
+        best_action = None
+        best_score = -float('inf')
+        
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            score = self._evaluate_position_2ply(next_state, action, player)
+            
+            if score > best_score:
+                best_score = score
+                best_action = action
+        
+        if best_action is not None:
+            return best_action
+        
+        # 5. Fallback: prefer center
+        center = self.game.column_count // 2
+        weights = np.array([1.0 / (1.0 + abs(i - center)) for i in valid_actions])
+        weights /= weights.sum()
+        
+        return np.random.choice(valid_actions, p=weights)
+    
+    def _evaluate_position_2ply(self, state, last_action, player):
+        """
+        Evaluate position with 2-ply lookahead.
+        Returns higher score for positions with more threats/opportunities.
+        """
+        score = 0
+        opponent = -player
+        
+        # Check if this move creates a threat
+        if self._creates_threat(state, last_action, player):
+            score += 10
+        
+        # Look ahead one more ply: can we create a winning position next move?
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        for next_action in valid_actions:
+            next_state = self.game.get_next_state(state, next_action, player)
+            
+            # Can we win next move?
+            if self.game.check_win(next_state, next_action):
+                score += 50
+            # Does this create multiple threats?
+            elif self._creates_threat(next_state, next_action, player):
+                score += 5
+        
+        # Penalty if opponent can create threats from this position
+        for next_action in valid_actions:
+            next_state = self.game.get_next_state(state, next_action, opponent)
+            if self.game.check_win(next_state, next_action):
+                score -= 30  # Opponent could win
+            elif self._creates_threat(next_state, next_action, opponent):
+                score -= 3
+        
+        return score
+
+    def select_action(self, state, player):
+        """Wrapper for basic 1-ply heuristic"""
+        return self.get_action(state, player)
+    
+    def select_aggressive_action(self, state, player):
+        """Wrapper for aggressive heuristic"""
+        return self.get_action_aggressive(state, player)
+    
+    def select_strong_action(self, state, player):
+        """Wrapper for strong 2-ply heuristic"""
+        return self.get_action_strong(state, player)

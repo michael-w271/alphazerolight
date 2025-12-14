@@ -203,7 +203,7 @@ class AlphaZeroTrainer:
                     self.initial_lr = new_lr
                     break
 
-    def self_play_vs_random(self, temperature=None, use_heuristic=False, use_aggressive=False):
+    def self_play_vs_random(self, temperature=None, use_heuristic=False, use_aggressive=False, use_strong=False):
         """
         Play game where model plays as either player 1 or -1 (50/50 random).
         
@@ -211,6 +211,7 @@ class AlphaZeroTrainer:
             temperature: Temperature for move selection
             use_heuristic: If True, opponent uses 1-ply heuristic. If False, pure random.
             use_aggressive: If True, opponent actively creates threats (forces blocking practice)
+            use_strong: If True, opponent uses 2-ply lookahead with center opening
         
         This provides clean value targets during warmup phase.
         CRITICAL: Randomly alternate which player the model controls so it learns
@@ -237,7 +238,10 @@ class AlphaZeroTrainer:
                 action = np.random.choice(self.game.action_size, p=temperature_action_probs)
             else:
                 # Opponent's turn
-                if use_aggressive:
+                if use_strong:
+                    # Strong 2-ply opponent: center opening + 2-ply lookahead
+                    action = self.heuristic_opponent.get_action_strong(state, player)
+                elif use_aggressive:
                     # Aggressive opponent: actively creates threats
                     action = self.heuristic_opponent.get_action_aggressive(state, player)
                 elif use_heuristic:
@@ -694,33 +698,40 @@ class AlphaZeroTrainer:
                 # Progressive difficulty in warmup phase with extended tactical training
                 use_heuristic = False
                 if in_warmup_phase:
-                    # Extended warmup schedule (assumes random_opponent_iterations = 100):
-                    # Iterations 0-39: Pure random (40 iterations to build fundamentals)
-                    # Iterations 40-79: Heuristic opponent (40 iterations for tactical skills)
-                    # Iterations 80-99: Mix (20 iterations to generalize)
-                    warmup_third = random_opponent_iters // 3
-                    warmup_two_thirds = 2 * warmup_third
+                    # New extended schedule (random_opponent_iterations = 115):
+                    # Iterations 0-27: Pure random (28 iterations, reduced from 33)
+                    # Iterations 28-54: 1-ply heuristic (27 iterations, reduced from 33)
+                    # Iterations 55-84: Mixed (tactical + aggressive + heuristic, 30 iterations)
+                    # Iterations 85-114: Strong 2-ply + mixed (30 iterations, NEW)
+                    warmup_quarter = random_opponent_iters // 4  # ~28
+                    warmup_half = random_opponent_iters // 2      # ~57
+                    warmup_three_quarter = 3 * warmup_quarter     # ~85
                     
-                    if iteration >= warmup_two_thirds:
-                        use_heuristic = (np.random.random() < 0.5)  # 50% chance
-                    elif iteration >= warmup_third:
-                        use_heuristic = True  # Always heuristic
+                    if iteration >= warmup_three_quarter:
+                        use_heuristic = 'strong'  # Strong 2-ply phase
+                    elif iteration >= warmup_half:
+                        use_heuristic = 'mixed'   # Mixed phase
+                    elif iteration >= warmup_quarter:
+                        use_heuristic = True      # Basic heuristic
                     else:
-                        use_heuristic = False  # Always random
+                        use_heuristic = False     # Random
                 
                 # Self-play with progress bar
                 self.model.eval()
                 
                 if in_warmup_phase:
-                    warmup_third = random_opponent_iters // 3
-                    warmup_two_thirds = 2 * warmup_third
+                    warmup_quarter = random_opponent_iters // 4
+                    warmup_half = random_opponent_iters // 2
+                    warmup_three_quarter = 3 * warmup_quarter
                     
-                    if iteration < warmup_third:
+                    if iteration < warmup_quarter:
                         opponent_desc = "Pure Random (Learning Fundamentals)"
-                    elif iteration < warmup_two_thirds:
+                    elif iteration < warmup_half:
                         opponent_desc = "1-ply Heuristic (Learning Tactics: Win/Block)"
+                    elif iteration < warmup_three_quarter:
+                        opponent_desc = "Mixed: Tactical Puzzles + Aggressive + Heuristic"
                     else:
-                        opponent_desc = "Mixed: Tactical Puzzles + Aggressive + Heuristic + Random"
+                        opponent_desc = "Strong 2-ply + Mixed (Advanced Tactics)"
                     
                     print(f"🎮 WARMUP PHASE: Playing vs {opponent_desc}")
                     print(f"   - {self.args['num_self_play_iterations']} games")
@@ -738,16 +749,43 @@ class AlphaZeroTrainer:
                 # Sequential self-play (parallel had multiprocessing issues with CUDA)
                 memory = []
                 
-                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80, mininterval=10.0):
+                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80):
                     # Determine game type based on warmup phase
-                    warmup_third = random_opponent_iters // 3
-                    warmup_two_thirds = 2 * warmup_third
+                    warmup_quarter = random_opponent_iters // 4
+                    warmup_half = random_opponent_iters // 2
+                    warmup_three_quarter = 3 * warmup_quarter
                     
-                    if in_warmup_phase and iteration >= warmup_two_thirds:
-                        # Mixed phase
+                    if in_warmup_phase and iteration >= warmup_three_quarter:
+                        # Strong 2-ply phase: 20% tactical, 30% strong, 25% aggressive, 25% heuristic
+                        game_type = np.random.choice(['tactical', 'strong', 'aggressive', 'heuristic'], 
+                                                    p=[0.20, 0.30, 0.25, 0.25])
+                        if game_type == 'tactical':
+                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
+                        elif game_type == 'strong':
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_strong=True)
+                        elif game_type == 'aggressive':
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                        else:
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                    elif in_warmup_phase and iteration >= warmup_half:
+                        # Mixed phase: 30% tactical, 25% aggressive, 25% heuristic, 20% random
                         game_type = np.random.choice(['tactical', 'aggressive', 'heuristic', 'random'], 
                                                     p=[0.30, 0.25, 0.25, 0.20])
                         if game_type == 'tactical':
+                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
+                        elif game_type == 'aggressive':
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                        elif game_type == 'heuristic':
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                        else:
+                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                    elif in_warmup_phase and iteration >= warmup_quarter:
+                        # Heuristic phase
+                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                    elif in_warmup_phase:
+                        # Random phase
+                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                    else:
                             game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
                         elif game_type == 'aggressive':
                             game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
@@ -785,7 +823,7 @@ class AlphaZeroTrainer:
                 sys.stdout.flush()
                 
                 # Show epoch progress with tqdm
-                for epoch in tqdm(range(self.args['num_epochs']), desc="Training", ncols=80, mininterval=10.0):
+                for epoch in tqdm(range(self.args['num_epochs']), desc="Training", ncols=80):
                     loss, policy_loss, value_loss = self.train(memory)
                     epoch_losses.append(loss)
                     epoch_policy_losses.append(policy_loss)

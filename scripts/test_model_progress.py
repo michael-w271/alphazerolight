@@ -226,15 +226,18 @@ def main():
             print(f"💾 Results saved to: {results_file}")
             print("⏳ Waiting for next iteration...")
             print()
+            sys.stdout.flush()  # Force immediate output
             
             last_tested_iteration = iteration
             time.sleep(10)
             
         except KeyboardInterrupt:
             print("\n\n🛑 Testing stopped by user")
+            sys.stdout.flush()
             break
         except Exception as e:
             print(f"⚠️  Error: {e}")
+            sys.stdout.flush()
             time.sleep(5)
 
 if __name__ == '__main__':
