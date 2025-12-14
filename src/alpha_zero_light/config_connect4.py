@@ -11,7 +11,7 @@ TRAINING_CONFIG = {
     'num_self_play_iterations': 400,    # Games per iteration
     'num_parallel_workers': 2,          # CPU cores per batch (conservative for stability)
     'games_per_batch': 50,              # Games per parallel batch (8 batches of 50 = 400 total)
-    'num_epochs': 50,                   # Training epochs per iteration
+    'num_epochs': 100,                  # Increased from 50 - training is fast relative to self-play
     'batch_size': 512,                  # Batch size for neural network training
     'temperature_schedule': [           # Exploration schedule
         {'until_iteration': 40, 'temperature': 1.25},
