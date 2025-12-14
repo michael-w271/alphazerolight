@@ -9,6 +9,8 @@ from dataclasses import dataclass
 TRAINING_CONFIG = {
     'num_iterations': 200,              # Optimized: 100 warmup + 100 self-play
     'num_self_play_iterations': 400,    # Games per iteration
+    'num_parallel_workers': 2,          # CPU cores per batch (conservative for stability)
+    'games_per_batch': 50,              # Games per parallel batch (8 batches of 50 = 400 total)
     'num_epochs': 50,                   # Training epochs per iteration
     'batch_size': 512,                  # Batch size for neural network training
     'temperature_schedule': [           # Exploration schedule
@@ -34,8 +36,8 @@ MCTS_CONFIG = {
 
 # Model Configuration
 MODEL_CONFIG = {
-    'num_res_blocks': 15,               # Larger model for better pattern recognition
-    'num_hidden': 256,                  # Wider network for Connect Four complexity
+    'num_res_blocks': 10,               # Reduced from 15 for faster training with parallelization
+    'num_hidden': 128,                  # Reduced from 256 for faster training
     'learning_rate': 0.001,             # Moderate initial LR
     'learning_rate_schedule': [         # DISABLED - let it train smoothly
         # {'at_iteration': 75, 'factor': 0.5},
