@@ -108,8 +108,8 @@ def load_model(game_name, checkpoint_name=None):
         num_hidden = 64
     elif game_name == "Connect Four":
         game = ConnectFour()
-        num_res_blocks = 6
-        num_hidden = 64
+        num_res_blocks = 15  # Updated to match new larger model
+        num_hidden = 256     # Updated to match new larger model
         checkpoint_dir = Path(__file__).parent.parent.parent.parent.parent / "checkpoints" / "connect4"
     else:
         st.error(f"Unknown game: {game_name}")
