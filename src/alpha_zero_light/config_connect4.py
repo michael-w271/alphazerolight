@@ -11,7 +11,7 @@ TRAINING_CONFIG = {
     'num_self_play_iterations': 400,    # Games per iteration
     'num_parallel_workers': 2,          # CPU cores per batch (conservative for stability)
     'games_per_batch': 50,              # Games per parallel batch (8 batches of 50 = 400 total)
-    'num_epochs': 100,                  # Increased from 50 - training is fast relative to self-play
+    'num_epochs': 125,                  # Increased to 125 - training is fast relative to self-play
     'batch_size': 512,                  # Batch size for neural network training
     'temperature_schedule': [           # Exploration schedule
         {'until_iteration': 40, 'temperature': 1.25},
@@ -19,7 +19,7 @@ TRAINING_CONFIG = {
         {'until_iteration': 160, 'temperature': 0.75}
     ],
     'value_loss_weight': 2.0,           # Weight value loss more heavily
-    'random_opponent_iterations': 115,  # EXTENDED: 0-27 random, 28-54 heuristic, 55-84 mixed, 85-114 strong+mixed
+    'random_opponent_iterations': 100,  # OPTIMIZED: 0-19 random, 20-44 heuristic, 45-69 mixed, 70-99 strong+mixed
     'eval_frequency': 10,               
     'num_eval_games': 20,               
     'dirichlet_epsilon': 0.25,          
