@@ -15,11 +15,14 @@ from alpha_zero_light.training.tactical_trainer import TacticalTrainer
 
 def _worker_self_play_games(args):
     """Worker function for parallel self-play (must be at module level for pickling)"""
-    num_games, temperature, model_state, game_type, row_count, column_count, train_args = args
+    (num_games, temperature, model_state, game_type, row_count, column_count, train_args,
+     in_warmup_phase, warmup_iteration, random_opponent_iters) = args
     
     # Import here to avoid issues
     from alpha_zero_light.model.network import ResNet
     from alpha_zero_light.mcts.mcts import MCTS
+    from alpha_zero_light.training.heuristic_opponent import HeuristicOpponent
+    from alpha_zero_light.training.tactical_trainer import TacticalTrainer
     
     # Recreate game
     if game_type == "ConnectFour":
@@ -41,37 +44,112 @@ def _worker_self_play_games(args):
     # Create MCTS
     mcts = MCTS(game, train_args, model)
     
+    # Create opponents
+    heuristic_opponent = HeuristicOpponent(game)
+    tactical_trainer = TacticalTrainer(game)
+    
+    # Determine warmup phase
+    warmup_third = random_opponent_iters // 3 if in_warmup_phase else 0
+    warmup_two_thirds = 2 * warmup_third if in_warmup_phase else 0
+    
     # Play games
     worker_memory = []
     for _ in range(num_games):
-        game_memory = []
-        player = 1
-        state = game.get_initial_state()
+        # Determine game type based on warmup phase
+        if in_warmup_phase and warmup_iteration >= warmup_two_thirds:
+            # Mixed phase
+            game_mode = np.random.choice(['tactical', 'aggressive', 'heuristic', 'random'], 
+                                        p=[0.30, 0.25, 0.25, 0.20])
+        elif in_warmup_phase and warmup_iteration < warmup_third:
+            # Pure random
+            game_mode = 'random'
+        elif in_warmup_phase:
+            # Heuristic
+            game_mode = 'heuristic'
+        else:
+            # Self-play phase
+            game_mode = np.random.choice(['self_play', 'aggressive', 'heuristic'], 
+                                        p=[0.80, 0.10, 0.10])
         
-        while True:
-            neutral_state = game.change_perspective(state, player)
-            action_probs = mcts.search(neutral_state)
+        # Play one game based on mode
+        game_memory = []
+        
+        if game_mode == 'tactical':
+            game_memory = tactical_trainer.generate_tactical_game(mcts)
+        elif game_mode in ['self_play']:
+            # Pure self-play
+            player = 1
+            state = game.get_initial_state()
             
-            game_memory.append((neutral_state, action_probs, player))
+            while True:
+                neutral_state = game.change_perspective(state, player)
+                action_probs = mcts.search(neutral_state)
+                
+                game_memory.append((neutral_state, action_probs, player))
+                
+                temp_action_probs = action_probs ** (1 / temperature)
+                temp_action_probs /= np.sum(temp_action_probs)
+                action = np.random.choice(game.action_size, p=temp_action_probs)
+                
+                state = game.get_next_state(state, action, player)
+                value, is_terminal = game.get_value_and_terminated(state, action)
+                
+                if is_terminal:
+                    for hist_state, hist_probs, hist_player in game_memory:
+                        hist_outcome = value if hist_player == player else game.get_opponent_value(value)
+                        worker_memory.append((
+                            game.get_encoded_state(hist_state),
+                            hist_probs,
+                            hist_outcome
+                        ))
+                    break
+                
+                player = game.get_opponent(player)
+        else:
+            # vs opponent (random/heuristic/aggressive)
+            use_heuristic = game_mode in ['heuristic']
+            use_aggressive = game_mode in ['aggressive']
             
-            temp_action_probs = action_probs ** (1 / temperature)
-            temp_action_probs /= np.sum(temp_action_probs)
-            action = np.random.choice(game.action_size, p=temp_action_probs)
+            # Randomly choose who goes first
+            model_player = np.random.choice([1, -1])
+            opponent_player = -model_player
             
-            state = game.get_next_state(state, action, player)
-            value, is_terminal = game.get_value_and_terminated(state, action)
+            player = 1
+            state = game.get_initial_state()
             
-            if is_terminal:
-                for hist_state, hist_probs, hist_player in game_memory:
-                    hist_outcome = value if hist_player == player else game.get_opponent_value(value)
-                    worker_memory.append((
-                        game.get_encoded_state(hist_state),
-                        hist_probs,
-                        hist_outcome
-                    ))
-                break
-            
-            player = game.get_opponent(player)
+            while True:
+                if player == model_player:
+                    # Model's turn
+                    neutral_state = game.change_perspective(state, player)
+                    action_probs = mcts.search(neutral_state)
+                    game_memory.append((neutral_state, action_probs, player))
+                    
+                    temp_action_probs = action_probs ** (1 / temperature)
+                    temp_action_probs /= np.sum(temp_action_probs)
+                    action = np.random.choice(game.action_size, p=temp_action_probs)
+                else:
+                    # Opponent's turn
+                    if use_heuristic:
+                        action = heuristic_opponent.select_action(state, player)
+                    elif use_aggressive:
+                        action = heuristic_opponent.select_aggressive_action(state, player)
+                    else:
+                        action = np.random.choice(game.action_size)
+                
+                state = game.get_next_state(state, action, player)
+                value, is_terminal = game.get_value_and_terminated(state, action)
+                
+                if is_terminal:
+                    for hist_state, hist_probs, hist_player in game_memory:
+                        hist_outcome = value if hist_player == player else game.get_opponent_value(value)
+                        worker_memory.append((
+                            game.get_encoded_state(hist_state),
+                            hist_probs,
+                            hist_outcome
+                        ))
+                    break
+                
+                player = game.get_opponent(player)
     
     return worker_memory
 
@@ -224,7 +302,7 @@ class AlphaZeroTrainer:
             
             player = self.game.get_opponent(player)
     
-    def _parallel_self_play_multicore(self, num_workers, temperature):
+    def _parallel_self_play_multicore(self, num_workers, temperature, in_warmup_phase, warmup_iteration, random_opponent_iters):
         """Run self-play games in parallel across multiple CPU cores"""
         games_per_worker = self.args['num_self_play_iterations'] // num_workers
         remainder = self.args['num_self_play_iterations'] % num_workers
@@ -239,17 +317,21 @@ class AlphaZeroTrainer:
             (games_per_worker + (1 if i < remainder else 0), temperature, model_state, 
              type(self.game).__name__, self.game.row_count if hasattr(self.game, 'row_count') else None,
              self.game.column_count if hasattr(self.game, 'column_count') else None, 
-             self.args)
+             self.args, in_warmup_phase, warmup_iteration, random_opponent_iters)
             for i in range(num_workers)
         ]
         
         # Run parallel workers
+        print(f"   - Launching {num_workers} parallel workers on CPU cores...")
+        sys.stdout.flush()
+        
         ctx = mp.get_context('spawn')  # Use spawn to avoid CUDA fork issues
         with ctx.Pool(processes=num_workers) as pool:
             results = list(tqdm(
                 pool.imap_unordered(_worker_self_play_games, worker_tasks),
                 total=num_workers,
-                desc="Worker completion",
+                desc="   Workers",
+                ncols=80,
                 unit="worker"
             ))
         
@@ -385,12 +467,13 @@ class AlphaZeroTrainer:
                 active_indices = next_active_indices
                 move_count += 1
                 
-                # Progress indicator every 10 moves
+                # Progress indicator every 200 games
                 if move_count % 10 == 0:
                     completed = batch_size - len(active_indices)
                     total_completed = batch_start + completed
-                    print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
-                    sys.stdout.flush()
+                    if total_completed % 200 == 0 or total_completed == num_games:
+                        print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
+                        sys.stdout.flush()
                 
         print(f"   - Progress: {num_games}/{num_games} games finished")
         sys.stdout.flush()
@@ -490,12 +573,13 @@ class AlphaZeroTrainer:
                 active_indices = next_active_indices
                 move_count += 1
                 
-                # Progress indicator every 10 moves
+                # Progress indicator every 200 games
                 if move_count % 10 == 0:
                     completed = batch_size - len(active_indices)
                     total_completed = batch_start + completed
-                    print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
-                    sys.stdout.flush()
+                    if total_completed % 200 == 0 or total_completed == num_games:
+                        print(f"   - Progress: {total_completed}/{num_games} games finished", end='\r')
+                        sys.stdout.flush()
                 
         print(f"   - Progress: {num_games}/{num_games} games finished")
         sys.stdout.flush()
@@ -651,46 +735,34 @@ class AlphaZeroTrainer:
                 print(f"   - Temperature: {temperature:.2f}")
                 sys.stdout.flush()
                 
-                # Sequential self-play with GPU batching for speed
+                # Sequential self-play (parallel had multiprocessing issues with CUDA)
                 memory = []
                 
-                # In mixed phase, add tactical puzzles (30% of games)
-                warmup_third = random_opponent_iters // 3
-                warmup_two_thirds = 2 * warmup_third
-                tactical_games = 0
-                
-                if in_warmup_phase and iteration >= warmup_two_thirds:
-                    # Mixed phase: include tactical training
-                    num_tactical = int(self.args['num_self_play_iterations'] * 0.3)
-                    tactical_games = num_tactical
-                    print(f"   - Including {num_tactical} tactical puzzle games")
-                    sys.stdout.flush()
-                
-                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play games", unit="game"):
-                    # In mixed phase, decide game type
+                for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80):
+                    # Determine game type based on warmup phase
+                    warmup_third = random_opponent_iters // 3
+                    warmup_two_thirds = 2 * warmup_third
+                    
                     if in_warmup_phase and iteration >= warmup_two_thirds:
-                        # Mixed phase: 30% tactical, 25% aggressive, 25% heuristic, 20% random
+                        # Mixed phase
                         game_type = np.random.choice(['tactical', 'aggressive', 'heuristic', 'random'], 
                                                     p=[0.30, 0.25, 0.25, 0.20])
-                        
                         if game_type == 'tactical':
-                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)  # Random player selection
+                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
                         elif game_type == 'aggressive':
                             game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
                         elif game_type == 'heuristic':
                             game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                         else:
                             game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                    elif in_warmup_phase and iteration < warmup_third:
+                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
                     elif in_warmup_phase:
-                        # Earlier warmup phases: random or heuristic
-                        game_use_heuristic = use_heuristic
-                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=game_use_heuristic)
+                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                     else:
-                        # Self-play phase: Mix in some opponent games to maintain defensive skills
-                        # 80% pure self-play, 10% aggressive opponent, 10% heuristic opponent
+                        # Self-play phase
                         game_type = np.random.choice(['self_play', 'aggressive', 'heuristic'], 
                                                     p=[0.80, 0.10, 0.10])
-                        
                         if game_type == 'self_play':
                             game_memory = self.self_play(temperature=temperature)
                         elif game_type == 'aggressive':
@@ -700,7 +772,7 @@ class AlphaZeroTrainer:
                     
                     memory.extend(game_memory)
                 
-                print(f"✅ Generated {len(memory)} training samples")
+                print(f"✅ Generated {len(memory)} training samples total")
                 sys.stdout.flush()
                 
                 # Training
@@ -712,8 +784,8 @@ class AlphaZeroTrainer:
                 print(f"🧠 Training neural network ({self.args['num_epochs']} epochs)...")
                 sys.stdout.flush()
                 
-                for epoch in tqdm(range(self.args['num_epochs']), desc=f"Training", 
-                                  ncols=80, file=sys.stdout, position=1, leave=False):
+                # Disable tqdm progress bar to reduce prints (show only final result)
+                for epoch in range(self.args['num_epochs']):
                     loss, policy_loss, value_loss = self.train(memory)
                     epoch_losses.append(loss)
                     epoch_policy_losses.append(policy_loss)
