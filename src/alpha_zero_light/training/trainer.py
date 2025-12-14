@@ -786,19 +786,7 @@ class AlphaZeroTrainer:
                         # Random phase
                         game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
                     else:
-                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
-                        elif game_type == 'aggressive':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
-                        elif game_type == 'heuristic':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
-                        else:
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
-                    elif in_warmup_phase and iteration < warmup_third:
-                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
-                    elif in_warmup_phase:
-                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
-                    else:
-                        # Self-play phase
+                        # Self-play phase: 80% self-play, 10% aggressive, 10% heuristic
                         game_type = np.random.choice(['self_play', 'aggressive', 'heuristic'], 
                                                     p=[0.80, 0.10, 0.10])
                         if game_type == 'self_play':
@@ -808,6 +796,7 @@ class AlphaZeroTrainer:
                         else:
                             game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                     
+                    memory.extend(game_memory)
                     memory.extend(game_memory)
                 
                 print(f"✅ Generated {len(memory)} training samples total")
