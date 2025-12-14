@@ -8,3 +8,9 @@ mlruns/
 dist/
 build/
 checkpoints/
+checkpoints_old*/
+
+# Training logs and results
+training_log*.txt
+model_test_results.json
+training_progress.json
