@@ -37,7 +37,9 @@ class Node:
                 best_children.append(child)
         
         # Break ties randomly to avoid deterministic artifacts
-        return best_children[np.random.randint(len(best_children))]    def get_ucb(self, child):
+        return best_children[np.random.randint(len(best_children))]
+    
+    def get_ucb(self, child):
         """
         PUCT score from *this node's perspective*.
         NOTE: child.value_sum/visit_count is from the CHILD's perspective (child is opponent-to-move),
