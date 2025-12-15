@@ -3,7 +3,8 @@ import math
 import numpy as np
 
 class Node:
-    def __init__(self, game, args, state, parent=None, action_taken=None, prior=0, visit_count=0):
+    def __init__(self, game, args, state, parent=None, action_taken=None, prior=0, visit_count=0, 
+                 is_terminal=False, terminal_value=0):
         self.game = game
         self.args = args
         self.state = state
@@ -16,40 +17,74 @@ class Node:
         self.visit_count = visit_count
         self.value_sum = 0
         
+        # Store terminal state info (checked before perspective flip)
+        self.is_terminal = is_terminal
+        self.terminal_value = terminal_value
+        
     def is_fully_expanded(self):
         return len(self.children) > 0
     
     def select(self):
-        best_child = None
         best_ucb = -np.inf
+        best_children = []
         
         for child in self.children:
             ucb = self.get_ucb(child)
-            if ucb > best_ucb:
-                best_child = child
+            if ucb > best_ucb + 1e-12:
                 best_ucb = ucb
-                
-        return best_child
-    
-    def get_ucb(self, child):
-        # Use actual Q-value (average reward), not inverted
+                best_children = [child]
+            elif abs(ucb - best_ucb) <= 1e-12:
+                best_children.append(child)
+        
+        # Break ties randomly to avoid deterministic artifacts
+        return best_children[np.random.randint(len(best_children))]    def get_ucb(self, child):
+        """
+        PUCT score from *this node's perspective*.
+        NOTE: child.value_sum/visit_count is from the CHILD's perspective (child is opponent-to-move),
+        so we negate it to obtain Q from the parent's perspective.
+        """
         if child.visit_count == 0:
-            q_value = 0
+            q = 0.0
         else:
-            q_value = child.value_sum / child.visit_count
-        return q_value + self.args['C'] * (math.sqrt(self.visit_count) / (child.visit_count + 1)) * child.prior
+            q = -(child.value_sum / child.visit_count)  # CRITICAL: convert to parent perspective
+        
+        # Standard PUCT exploration term; +1 keeps exploration non-zero at the beginning
+        u = (
+            self.args['C']
+            * child.prior
+            * (math.sqrt(self.visit_count + 1.0) / (child.visit_count + 1.0))
+        )
+        return q + u
     
     def expand(self, policy):
+        # Only expand once - critical bug fix!
+        if len(self.children) > 0:
+            return  # Already expanded
+            
         for action, prob in enumerate(policy):
             if prob > 0:
                 if isinstance(self.state, torch.Tensor):
                     child_state = self.state.clone()
                 else:
                     child_state = self.state.copy()
+                    
+                # Apply the move from current player's perspective
                 child_state = self.game.get_next_state(child_state, action, 1)
+                
+                # CRITICAL FIX: Check terminal state BEFORE flipping perspective
+                # This ensures we check if the action wins for the current player
+                terminal_value, is_terminal = self.game.get_value_and_terminated(child_state, action)
+                
+                # Now flip to opponent's perspective for the child node
                 child_state = self.game.change_perspective(child_state, player=-1)
-
-                child = Node(self.game, self.args, child_state, self, action, prob)
+                
+                # If terminal from parent's view (value=1 means parent won),
+                # from child's view this is a loss (value=-1)
+                if is_terminal and terminal_value != 0:
+                    terminal_value = -terminal_value
+                
+                child = Node(self.game, self.args, child_state, self, action, prob,
+                           is_terminal=is_terminal, terminal_value=terminal_value)
                 self.children.append(child)
                 
     def backpropagate(self, value):
@@ -72,14 +107,26 @@ class MCTS:
         MCTS search with GPU-optimized batched inference.
         Collects multiple leaf nodes and evaluates them together for better GPU utilization.
         """
+        import os
+        debug = os.environ.get('DEBUG_MCTS') == '1'
+        
         root = Node(self.game, self.args, state, visit_count=0)
         
-        # Batch size for neural network inference - small batches for low search counts
-        batch_size = min(8, self.args['num_searches'])
+        # Batch size for leaf evaluation
+        # Default to 1 for correctness (sequential updates prevent stale tree)
+        # Can be increased with virtual loss implementation for GPU efficiency
+        batch_size = int(self.args.get('mcts_batch_size', 1))
+        batch_size = max(1, min(batch_size, self.args['num_searches']))
+        
+        if debug:
+            print(f"Starting search: {self.args['num_searches']} searches, batch_size={batch_size}")
         
         for batch_start in range(0, self.args['num_searches'], batch_size):
             batch_end = min(batch_start + batch_size, self.args['num_searches'])
             current_batch_size = batch_end - batch_start
+            
+            if debug and batch_start % 32 == 0:
+                print(f"  Batch {batch_start}-{batch_end}, root expanded: {len(root.children) > 0}, root visits: {root.visit_count}")
             
             # Collect leaf nodes for this batch
             leaf_nodes = []
@@ -94,11 +141,12 @@ class MCTS:
             non_terminal_states = []
             
             for node in leaf_nodes:
-                value, is_terminal = self.game.get_value_and_terminated(node.state, node.action_taken)
-                if is_terminal:
+                # Use the pre-computed terminal info stored in the node
+                # This was checked BEFORE perspective flip, so it's correct
+                if node.is_terminal:
                     # Terminal node - backpropagate immediately
-                    value = self.game.get_opponent_value(value)
-                    node.backpropagate(value)
+                    # terminal_value is already from this node's perspective (flipped in expand())
+                    node.backpropagate(node.terminal_value)
                 else:
                     non_terminal_nodes.append(node)
                     non_terminal_states.append(self.game.get_encoded_state(node.state))
@@ -141,6 +189,18 @@ class MCTS:
             
         # Return action probabilities based on visit counts
         action_probs = np.zeros(self.game.action_size)
+        
+        # DEBUG: Print visit counts
+        import os
+        if os.environ.get('DEBUG_MCTS') == '1':
+            print(f"\n=== MCTS Debug: Visit Counts After {self.args.get('num_searches', 50)} Searches ===")
+            for child in root.children:
+                q_val = child.value_sum / child.visit_count if child.visit_count > 0 else 0
+                print(f"  Action {child.action_taken}: visits={child.visit_count:4d}, "
+                      f"value_sum={child.value_sum:7.2f}, Q={q_val:6.3f}, "
+                      f"prior={child.prior:.4f}, terminal={child.is_terminal}, "
+                      f"term_val={child.terminal_value}")
+        
         for child in root.children:
             action_probs[child.action_taken] = child.visit_count
             
@@ -243,11 +303,9 @@ class MCTS:
             values = np.zeros(batch_size)
             
             for i, node in enumerate(nodes):
-                value, is_terminal = self.game.get_value_and_terminated(node.state, node.action_taken)
-                value = self.game.get_opponent_value(value)
-                
-                if is_terminal:
-                    values[i] = value
+                # Use pre-computed terminal info from the node
+                if node.is_terminal:
+                    values[i] = node.terminal_value
                 else:
                     encoded_states.append(self.game.get_encoded_state(node.state))
                     valid_indices.append(i)

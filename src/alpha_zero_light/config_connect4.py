@@ -11,7 +11,7 @@ TRAINING_CONFIG = {
     'num_self_play_iterations': 400,    # Games per iteration
     'num_parallel_workers': 2,          # CPU cores per batch (conservative for stability)
     'games_per_batch': 50,              # Games per parallel batch (8 batches of 50 = 400 total)
-    'num_epochs': 150,                  # 150 epochs for thorough learning (overfitting not an issue with fresh data)
+    'num_epochs': 120,                  # 120 epochs for better convergence
     'batch_size': 512,                  # Batch size for neural network training
     'temperature_schedule': [           # Exploration schedule
         {'until_iteration': 40, 'temperature': 1.25},
@@ -29,7 +29,7 @@ TRAINING_CONFIG = {
 # MCTS Configuration
 MCTS_CONFIG = {
     'C': 2.0,                           
-    'num_searches': 100,                # More searches for better tactical play
+    'num_searches': 80,                 # 80 searches for deeper tree exploration
     'dirichlet_alpha': 0.3,             # Exploration noise (lower = more concentrated)
     'dirichlet_epsilon': 0.25,          # Fraction of noise to add to root
 }

@@ -18,7 +18,6 @@ os.chdir(base_dir)  # Change to project root
 from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
-from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG
 import torch
 
 def clear_screen():
@@ -44,12 +43,12 @@ def test_model(model, mcts, game, iteration):
     try:
         # Test 1: Can find immediate win
         print("  Test 1: Finding immediate win...")
-        # Create state with 3 in a row vertically in column 3
+        # Create state with 3 in a row vertically in column 3 (bottom rows 5,4,3)
         state = np.zeros((6, 7), dtype=np.float32)
-        state[0, 3] = 1
-        state[1, 3] = 1
-        state[2, 3] = 1
-        # Column 3 has 3 pieces, playing col 3 wins
+        state[5, 3] = 1  # Bottom
+        state[4, 3] = 1
+        state[3, 3] = 1
+        # Column 3 has 3 pieces at bottom, playing col 3 wins
         
         action_probs = mcts.search(state)
         win_prob = action_probs[3]
@@ -63,10 +62,10 @@ def test_model(model, mcts, game, iteration):
         # Test 2: Can block opponent threat
         print("  Test 2: Blocking opponent threat...")
         state = np.zeros((6, 7), dtype=np.float32)
-        state[0, 5] = -1
-        state[1, 5] = -1
-        state[2, 5] = -1
-        # Opponent has 3 in column 5, MUST block
+        state[5, 5] = -1  # Bottom
+        state[4, 5] = -1
+        state[3, 5] = -1
+        # Opponent has 3 in column 5 at bottom, MUST block
         
         action_probs = mcts.search(state)
         block_prob = action_probs[5]
@@ -138,59 +137,109 @@ def main():
     
     # Initialize game and model
     game = ConnectFour()
-    model = ResNet(game, MODEL_CONFIG['num_res_blocks'], MODEL_CONFIG['num_hidden'])
-    model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
+    model = ResNet(game, num_res_blocks=10, num_hidden=128)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
     
-    # Combine configs for MCTS
-    args = {**TRAINING_CONFIG, **MCTS_CONFIG, **MODEL_CONFIG}
+    # MCTS config for testing
+    args = {
+        'C': 2,
+        'num_searches': 100,
+        'dirichlet_epsilon': 0.0,
+        'dirichlet_alpha': 0.3
+    }
     mcts = MCTS(game, args, model)
     
     # Load or create results history
     if results_file.exists():
         with open(results_file, 'r') as f:
             all_results = json.load(f)
+        # Get last tested iteration from history
+        if all_results.get('test_history'):
+            last_tested_iteration = all_results['test_history'][-1]['iteration']
+        else:
+            last_tested_iteration = -1
     else:
         all_results = {'test_history': []}
-    
-    last_tested_iteration = -1
+        last_tested_iteration = -1
     
     print_header()
-    print("Waiting for first model checkpoint to be created...")
-    print("(Training must complete iteration 1 first)")
+    print(f"Last tested: iteration {last_tested_iteration}")
+    print("Testing schedule: Every 10 iterations (10, 20, 30, 40, 50...)")
     print()
+    print("Scanning for untested checkpoints...")
+    sys.stdout.flush()
     
     while True:
         try:
-            # Find latest checkpoint
+            # Find all checkpoint files
             model_files = sorted(checkpoints_dir.glob('model_*.pt'))
             
             if not model_files:
+                print("No checkpoints found yet, waiting...")
+                sys.stdout.flush()
                 time.sleep(5)
                 continue
             
-            latest_model = model_files[-1]
-            iteration = int(latest_model.stem.split('_')[1])
+            # Find all iterations that should be tested
+            all_iterations = [int(f.stem.split('_')[1]) for f in model_files]
+            test_iterations = [i for i in all_iterations if i % 10 == 0 and i > last_tested_iteration]
             
-            # Skip if already tested
-            if iteration <= last_tested_iteration:
-                time.sleep(5)
+            if not test_iterations:
+                # No new tests needed, wait for next checkpoint
+                latest_iteration = all_iterations[-1]
+                next_test = ((latest_iteration // 10) + 1) * 10
+                print_header()
+                print(f"✅ All tests up to date (last tested: {last_tested_iteration})")
+                print(f"Current iteration: {latest_iteration}")
+                print(f"Waiting for iteration {next_test}...")
+                print()
+                
+                # Show recent test results
+                if all_results.get('test_history'):
+                    print("📊 RECENT TEST RESULTS:")
+                    print("=" * 80)
+                    recent = all_results['test_history'][-5:]  # Last 5 tests
+                    for r in recent:
+                        it = r['iteration']
+                        score = r['overall_score']
+                        rate = r['pass_rate'] * 100
+                        fw = '✅' if r['tests']['find_win']['passed'] else '❌'
+                        bt = '✅' if r['tests']['block_threat']['passed'] else '❌'
+                        eb = '✅' if r['tests']['empty_board_value']['passed'] else '❌'
+                        pc = '✅' if r['tests']['prefer_center']['passed'] else '❌'
+                        
+                        print(f"  Iteration {it:3d}: {score} ({rate:.0f}%)")
+                        print(f"    Win Detection: {fw}  |  Block Threat: {bt}  |  Board Eval: {eb}  |  Center Pref: {pc}")
+                        
+                        # Show probabilities for failed tests
+                        if not r['tests']['find_win']['passed']:
+                            prob = r['tests']['find_win'].get('probability', 0)
+                            print(f"      → Win move prob: {prob:.3f} (need >0.5)")
+                        if not r['tests']['block_threat']['passed']:
+                            prob = r['tests']['block_threat'].get('probability', 0)
+                            print(f"      → Block move prob: {prob:.3f} (need >0.3)")
+                        print()
+                    print("=" * 80)
+                print()
+                sys.stdout.flush()
+                time.sleep(10)
                 continue
             
-            # Test at iteration 5, then every 10 iterations
-            should_test = (iteration == 5) or (iteration % 10 == 0)
-            if not should_test:
-                last_tested_iteration = iteration
-                time.sleep(5)
-                continue
+            # Test the next untested iteration
+            iteration = test_iterations[0]
+            checkpoint_file = checkpoints_dir / f'model_{iteration}.pt'
             
             # Test this iteration
             print_header()
             print(f"📍 Testing Model at Iteration {iteration}")
+            print(f"   ({test_iterations.index(iteration) + 1}/{len(test_iterations)} pending tests)")
             print("=" * 80)
             print()
+            sys.stdout.flush()
             
             # Load model
-            model.load_state_dict(torch.load(latest_model, map_location=model.device))
+            model.load_state_dict(torch.load(checkpoint_file, map_location=model.device))
             model.eval()
             
             # Run tests
@@ -224,19 +273,22 @@ def main():
             print()
             print("=" * 80)
             print(f"💾 Results saved to: {results_file}")
-            print("⏳ Waiting for next iteration...")
             print()
             sys.stdout.flush()  # Force immediate output
             
             last_tested_iteration = iteration
-            time.sleep(10)
+            time.sleep(2)  # Brief pause before next test
             
         except KeyboardInterrupt:
             print("\n\n🛑 Testing stopped by user")
             sys.stdout.flush()
             break
         except Exception as e:
-            print(f"⚠️  Error: {e}")
+            import traceback
+            print(f"\n⚠️  Error occurred: {e}")
+            print("Stack trace:")
+            traceback.print_exc()
+            print("\n🔄 Continuing to next iteration...")
             sys.stdout.flush()
             time.sleep(5)
 
