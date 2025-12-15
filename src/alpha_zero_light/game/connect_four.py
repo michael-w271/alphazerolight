@@ -92,7 +92,10 @@ class ConnectFour(Game):
         if action is None or action < 0 or action >= self.column_count:
             return False
         
-        # Find the row where the last disc was placed (topmost disc in column)
+        # Find the row where the last disc was placed
+        # Since get_next_state places at the LOWEST empty row,
+        # we need to find the TOPMOST non-empty disc in this column
+        # (which is the most recently placed one)
         column = action
         row = -1
         for r in range(self.row_count):

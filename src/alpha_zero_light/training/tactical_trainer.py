@@ -123,6 +123,8 @@ class TacticalTrainer:
         if player is None:
             player = np.random.choice([1, -1])
         
+        model_player = player  # Remember which player the model started as
+        
         # Choose a random tactical scenario (70% chance) or start from empty (30%)
         scenario_type = np.random.choice([
             'win_in_one', 'block_threat', 'horizontal', 'empty'
@@ -171,17 +173,20 @@ class TacticalTrainer:
                         hist_probs,
                         hist_outcome
                     ))
-                return return_memory
+                # Convert to initial model player's perspective
+                model_outcome = value if model_player == player else self.game.get_opponent_value(value)
+                return return_memory, model_outcome
             
             player = self.game.get_opponent(player)
             move_count += 1
         
         # Draw - no winner after max moves
+        value = 0  # Draw
         return_memory = []
         for hist_state, hist_probs, hist_player in game_memory:
             return_memory.append((
                 self.game.get_encoded_state(hist_state),
                 hist_probs,
-                0.0  # Draw
+                0  # Draw
             ))
-        return return_memory
+        return return_memory, value

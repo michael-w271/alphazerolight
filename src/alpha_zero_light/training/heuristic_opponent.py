@@ -118,7 +118,7 @@ class HeuristicOpponent:
         col = last_action
         row = 0
         for r in range(self.game.row_count):
-            if state[0, r, col] == player:
+            if state[r, col] == player:
                 row = r
                 break
         
@@ -137,7 +137,7 @@ class HeuristicOpponent:
             r, c = row + dr, col + dc
             while (0 <= r < self.game.row_count and 
                    0 <= c < self.game.column_count and 
-                   state[0, r, c] == player):
+                   state[r, c] == player):
                 count += 1
                 r += dr
                 c += dc
@@ -146,7 +146,7 @@ class HeuristicOpponent:
             r, c = row - dr, col - dc
             while (0 <= r < self.game.row_count and 
                    0 <= c < self.game.column_count and 
-                   state[0, r, c] == player):
+                   state[r, c] == player):
                 count += 1
                 r -= dr
                 c -= dc

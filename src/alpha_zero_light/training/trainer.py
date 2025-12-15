@@ -809,7 +809,6 @@ class AlphaZeroTrainer:
                     
                     game_outcomes.append(outcome)
                     memory.extend(game_memory)
-                    memory.extend(game_memory)
                 
                 # Calculate game outcome statistics
                 num_draws = sum(1 for v in game_outcomes if v == 0)

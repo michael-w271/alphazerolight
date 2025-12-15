@@ -28,8 +28,8 @@ def load_latest_model(game):
     
     print(f"Loading model from iteration {iteration}...")
     
-    # Create model with correct architecture
-    model = ResNet(game, num_res_blocks=15, num_hidden=256)
+    # Create model with correct architecture (current training config)
+    model = ResNet(game, num_res_blocks=10, num_hidden=128)
     model.load_state_dict(torch.load(latest_model, map_location='cpu'))
     model.eval()
     
