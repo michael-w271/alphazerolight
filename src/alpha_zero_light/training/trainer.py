@@ -97,8 +97,11 @@ def _worker_self_play_games(args):
                 if is_terminal:
                     for hist_state, hist_probs, hist_player in game_memory:
                         hist_outcome = value if hist_player == player else game.get_opponent_value(value)
+                        # CRITICAL FIX: hist_state is in neutral (Player 1) perspective
+                        # Must convert to hist_player's perspective before encoding
+                        state_from_player_perspective = game.change_perspective(hist_state, hist_player)
                         worker_memory.append((
-                            game.get_encoded_state(hist_state),
+                            game.get_encoded_state(state_from_player_perspective),
                             hist_probs,
                             hist_outcome
                         ))
@@ -142,8 +145,11 @@ def _worker_self_play_games(args):
                 if is_terminal:
                     for hist_state, hist_probs, hist_player in game_memory:
                         hist_outcome = value if hist_player == player else game.get_opponent_value(value)
+                        # CRITICAL FIX: hist_state is in neutral (Player 1) perspective
+                        # Must convert to hist_player's perspective before encoding
+                        state_from_player_perspective = game.change_perspective(hist_state, hist_player)
                         worker_memory.append((
-                            game.get_encoded_state(hist_state),
+                            game.get_encoded_state(state_from_player_perspective),
                             hist_probs,
                             hist_outcome
                         ))
@@ -266,7 +272,9 @@ class AlphaZeroTrainer:
                         hist_action_probs,
                         hist_outcome
                     ))
-                return return_memory
+                # Convert value to model's perspective for outcome tracking
+                model_outcome = value if model_player == player else self.game.get_opponent_value(value)
+                return return_memory, model_outcome
             
             player = self.game.get_opponent(player)
 
@@ -302,7 +310,9 @@ class AlphaZeroTrainer:
                         hist_action_probs,
                         hist_outcome
                     ))
-                return return_memory
+                # In self-play, both players are the model, so track from player 1's perspective
+                model_outcome = value if player == 1 else self.game.get_opponent_value(value)
+                return return_memory, model_outcome
             
             player = self.game.get_opponent(player)
     
@@ -748,6 +758,7 @@ class AlphaZeroTrainer:
                 
                 # Sequential self-play (parallel had multiprocessing issues with CUDA)
                 memory = []
+                game_outcomes = []  # Track final values to count draws
                 
                 for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80):
                     # Determine game type based on warmup phase
@@ -760,46 +771,57 @@ class AlphaZeroTrainer:
                         game_type = np.random.choice(['tactical', 'strong', 'aggressive', 'heuristic'], 
                                                     p=[0.20, 0.30, 0.25, 0.25])
                         if game_type == 'tactical':
-                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
+                            game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
                         elif game_type == 'strong':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_strong=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_strong=True)
                         elif game_type == 'aggressive':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
                         else:
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                     elif in_warmup_phase and iteration >= phase2_end:
                         # Phase 3 (45-74): 30% tactical, 25% aggressive, 25% heuristic, 20% random
                         game_type = np.random.choice(['tactical', 'aggressive', 'heuristic', 'random'], 
                                                     p=[0.30, 0.25, 0.25, 0.20])
                         if game_type == 'tactical':
-                            game_memory = self.tactical_trainer.generate_tactical_game(self.mcts)
+                            game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
                         elif game_type == 'aggressive':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
                         elif game_type == 'heuristic':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                         else:
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
                     elif in_warmup_phase and iteration >= phase1_end:
                         # Phase 2 (20-44): Heuristic phase
-                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                     elif in_warmup_phase:
                         # Phase 1 (0-19): Random phase
-                        game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
                     else:
                         # Self-play phase (110-199): 80% self-play, 10% aggressive, 10% heuristic
                         game_type = np.random.choice(['self_play', 'aggressive', 'heuristic'], 
                                                     p=[0.80, 0.10, 0.10])
                         if game_type == 'self_play':
-                            game_memory = self.self_play(temperature=temperature)
+                            game_memory, outcome = self.self_play(temperature=temperature)
                         elif game_type == 'aggressive':
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
                         else:
-                            game_memory = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
                     
+                    game_outcomes.append(outcome)
                     memory.extend(game_memory)
                     memory.extend(game_memory)
                 
-                print(f"✅ Generated {len(memory)} training samples total")
+                # Calculate game outcome statistics
+                num_draws = sum(1 for v in game_outcomes if v == 0)
+                num_wins = sum(1 for v in game_outcomes if v == 1)
+                num_losses = sum(1 for v in game_outcomes if v == -1)
+                num_games = len(game_outcomes)
+                draw_pct = (num_draws / num_games * 100) if num_games > 0 else 0
+                win_pct = (num_wins / num_games * 100) if num_games > 0 else 0
+                loss_pct = (num_losses / num_games * 100) if num_games > 0 else 0
+                
+                print(f"✅ Generated {len(memory)} training samples from {num_games} games")
+                print(f"   Game outcomes: AI wins {num_wins} ({win_pct:.1f}%), Opponent wins {num_losses} ({loss_pct:.1f}%), Draws {num_draws} ({draw_pct:.1f}%)")
                 sys.stdout.flush()
                 
                 # Training
