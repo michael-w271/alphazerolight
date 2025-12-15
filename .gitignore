@@ -14,3 +14,6 @@ checkpoints_old*/
 training_log*.txt
 model_test_results.json
 training_progress.json
+
+# Large model files
+*.pt
