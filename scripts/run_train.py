@@ -10,7 +10,7 @@ from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 from alpha_zero_light.training.trainer import AlphaZeroTrainer
 from alpha_zero_light.training.evaluator import Evaluator
-from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS
+from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS, OPPONENT_MIX
 
 def main():
     print("="*60)
@@ -39,7 +39,7 @@ def main():
     )
     
     # Combine configs for trainer
-    args = {**TRAINING_CONFIG, **MCTS_CONFIG}
+    args = {**TRAINING_CONFIG, **MCTS_CONFIG, 'opponent_mix': OPPONENT_MIX}
     
     # Create MCTS
     mcts = MCTS(game, args, model)
