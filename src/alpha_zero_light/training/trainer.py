@@ -3,12 +3,14 @@ import numpy as np
 import random
 import json
 import sys
+import subprocess
 from pathlib import Path
 from tqdm import tqdm
 import os
 import multiprocessing as mp
 from functools import partial
 import time
+from datetime import datetime
 from alpha_zero_light.training.heuristic_opponent import HeuristicOpponent
 from alpha_zero_light.training.tactical_trainer import TacticalTrainer
 
@@ -183,6 +185,74 @@ class AlphaZeroTrainer:
             'eval_draws': []
         }
         self.initial_lr = optimizer.param_groups[0]['lr']
+
+    def _spawn_auto_eval(self, iter_old, iter_new):
+        """Spawn non-blocking model evaluation process with output to log file"""
+        cfg = self.args
+        script = cfg.get('auto_compare_script', 'compare_models.py')
+        log_dir = cfg.get('auto_compare_log_dir', 'logs/evaluations')
+        os.makedirs(log_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_path = os.path.join(log_dir, f'compare_{iter_old}_vs_{iter_new}_{timestamp}.log')
+        
+        # Get eval plan
+        plan = cfg.get('auto_compare_eval_plan', {})
+        vs_random = plan.get('vs_random', {})
+        h2h = plan.get('head_to_head', {})
+        
+        mcts_searches = int(cfg.get('auto_compare_mcts_searches', 50))
+        device = cfg.get('auto_compare_device', 'cpu')
+        
+        cmd = [
+            sys.executable, '-u', script,
+            '--iter1', str(iter_old),
+            '--iter2', str(iter_new),
+            '--device', str(device),
+            '--mcts_searches', str(mcts_searches),
+            '--random_games', str(int(vs_random.get('games', 10))),
+            '--random_only_p1', '1' if bool(vs_random.get('only_as_player1', True)) else '0',
+            '--h2h_p1_games', str(int(h2h.get('games_as_p1', 10))),
+            '--h2h_p2_games', str(int(h2h.get('games_as_p2', 10)))
+        ]
+        
+        print(f'\n🧪 Auto-eval (non-blocking): model_{iter_old} vs model_{iter_new}')
+        print(f'   Plan: {vs_random.get("games", 10)} vs random (P1 only), {h2h.get("games_as_p1", 10)}+{h2h.get("games_as_p2", 10)} h2h')
+        print(f'   Log: {log_path}\n')
+        
+        f = open(log_path, 'w')
+        self._compare_proc = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
+        self._compare_log_handle = f
+
+    def _spawn_quick_puzzle_eval(self, iter_old, iter_new):
+        """Spawn non-blocking quick puzzle evaluation (H2H + tactics)"""
+        cfg = self.args
+        script = Path(__file__).resolve().parents[3] / 'scripts' / 'quick_eval_puzzles.py'
+        log_dir = cfg.get('auto_compare_log_dir', 'logs/evaluations')
+        os.makedirs(log_dir, exist_ok=True)
+        
+        mcts_searches = int(cfg.get('quick_eval_mcts_searches', 70))
+        device = cfg.get('auto_compare_device', 'cpu')
+        h2h_each_side = int(cfg.get('quick_eval_h2h_games_each_side', 5))
+        num_puzzles = int(cfg.get('quick_eval_num_puzzles', 50))
+        
+        cmd = [
+            sys.executable, '-u', str(script),
+            '--iter1', str(iter_old),
+            '--iter2', str(iter_new),
+            '--device', str(device),
+            '--mcts_searches', str(mcts_searches),
+            '--h2h_games_each_side', str(h2h_each_side),
+            '--num_puzzles', str(num_puzzles),
+            '--seed', '42'
+        ]
+        
+        print(f'\n🧩 Quick puzzle eval (non-blocking): model_{iter_old} vs model_{iter_new}')
+        print(f'   Plan: {h2h_each_side}+{h2h_each_side} h2h games, {num_puzzles} tactical puzzles')
+        print(f'   Logs: {log_dir}/quick_eval_*\n')
+        
+        # Run in background, rely on script's own logging
+        self._quick_eval_proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def _get_temperature(self, iteration):
         """Get temperature for current iteration based on schedule"""
@@ -701,111 +771,64 @@ class AlphaZeroTrainer:
                 # Apply learning rate schedule if configured
                 self._apply_learning_rate_schedule(iteration)
                 
-                # Determine if we're in warmup phase (playing vs opponent)
+                # Determine phase using opponent_mix configuration
                 random_opponent_iters = self.args.get('random_opponent_iterations', 0)
-                in_warmup_phase = iteration < random_opponent_iters
+                opponent_mix = self.args.get('opponent_mix', {})
                 
-                # Progressive difficulty in warmup phase with extended tactical training
-                use_heuristic = False
-                if in_warmup_phase:
-                    # Optimized schedule (random_opponent_iterations = 110):
-                    # Iterations 0-19: Pure random (20 iterations)
-                    # Iterations 20-44: 1-ply heuristic (25 iterations)
-                    # Iterations 45-74: Mixed (tactical + aggressive + heuristic + random, 30 iterations)
-                    # Iterations 75-109: Strong 2-ply + mixed (35 iterations)
-                    phase1_end = 20
-                    phase2_end = 45
-                    phase3_end = 75
-                    
-                    if iteration >= phase3_end:
-                        use_heuristic = 'strong'  # Strong 2-ply phase
-                    elif iteration >= phase2_end:
-                        use_heuristic = 'mixed'   # Mixed phase
-                    elif iteration >= phase1_end:
-                        use_heuristic = True      # Basic heuristic
-                    else:
-                        use_heuristic = False     # Random
+                # Determine current phase
+                if iteration < random_opponent_iters:
+                    phase = 'bootstrap'
+                    phase_config = opponent_mix.get('bootstrap', {})
+                    print(f"🎮 BOOTSTRAP: 85% self-play, 10% random, 5% heuristic")
+                else:
+                    phase = 'main'
+                    phase_config = opponent_mix.get('main', {})
+                    print(f"🎮 MAIN: 97% self-play, 1.5% aggressive, 1.5% heuristic")
                 
                 # Self-play with progress bar
                 self.model.eval()
                 
-                if in_warmup_phase:
-                    phase1_end = 20
-                    phase2_end = 45
-                    phase3_end = 75
-                    
-                    if iteration < phase1_end:
-                        opponent_desc = "Pure Random (Learning Fundamentals)"
-                    elif iteration < phase2_end:
-                        opponent_desc = "1-ply Heuristic (Learning Tactics: Win/Block)"
-                    elif iteration < phase3_end:
-                        opponent_desc = "Mixed: Tactical Puzzles + Aggressive + Heuristic"
-                    else:
-                        opponent_desc = "Strong 2-ply + Mixed (Better Opponent Training)"
-                    
-                    print(f"🎮 WARMUP PHASE: Playing vs {opponent_desc}")
-                    print(f"   - {self.args['num_self_play_iterations']} games")
-                    print(f"   - Model randomly plays as Player 1 or -1 (50/50)")
-                    print(f"   - Progress: {iteration + 1}/{random_opponent_iters} warmup iterations")
-                else:
-                    print(f"🎮 SELF-PLAY PHASE: Model vs Model + Opponent Mix")
-                    print(f"   - {self.args['num_self_play_iterations']} games")
-                    print(f"   - 80% self-play, 10% aggressive opponent, 10% heuristic opponent")
+                print(f"   - {self.args['num_self_play_iterations']} games")
+                print(f"   - Model randomly plays as Player 1 or -1 (50/50)")
                 
                 print(f"   - MCTS searches: {self.args.get('num_searches', 50)}")
                 print(f"   - Temperature: {temperature:.2f}")
+                print(f"   - Phase: {phase}")
                 sys.stdout.flush()
                 
                 # Sequential self-play (parallel had multiprocessing issues with CUDA)
                 memory = []
                 game_outcomes = []  # Track final values to count draws
                 
+                # Get probabilities for current phase
+                probabilities = phase_config.get('probabilities', {})
+                game_types = list(probabilities.keys())
+                game_probs = list(probabilities.values())
+                
+                # Track actual game type distribution for verification
+                game_type_counts = {gt: 0 for gt in game_types}
+                
                 for game_num in tqdm(range(self.args['num_self_play_iterations']), desc="Self-play", ncols=80):
-                    # Determine game type based on warmup phase
-                    phase1_end = 20
-                    phase2_end = 45
-                    phase3_end = 75
+                    # Probabilistic opponent sampling
+                    game_type = np.random.choice(game_types, p=game_probs)
+                    game_type_counts[game_type] += 1
                     
-                    if in_warmup_phase and iteration >= phase3_end:
-                        # Phase 4 (75-109): 20% tactical, 30% strong, 25% aggressive, 25% heuristic
-                        game_type = np.random.choice(['tactical', 'strong', 'aggressive', 'heuristic'], 
-                                                    p=[0.20, 0.30, 0.25, 0.25])
-                        if game_type == 'tactical':
-                            game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
-                        elif game_type == 'strong':
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_strong=True)
-                        elif game_type == 'aggressive':
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
-                        else:
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
-                    elif in_warmup_phase and iteration >= phase2_end:
-                        # Phase 3 (45-74): 30% tactical, 25% aggressive, 25% heuristic, 20% random
-                        game_type = np.random.choice(['tactical', 'aggressive', 'heuristic', 'random'], 
-                                                    p=[0.30, 0.25, 0.25, 0.20])
-                        if game_type == 'tactical':
-                            game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
-                        elif game_type == 'aggressive':
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
-                        elif game_type == 'heuristic':
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
-                        else:
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
-                    elif in_warmup_phase and iteration >= phase1_end:
-                        # Phase 2 (20-44): Heuristic phase
-                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
-                    elif in_warmup_phase:
-                        # Phase 1 (0-19): Random phase
+                    # Dispatch to appropriate game generator
+                    if game_type == 'self_play':
+                        game_memory, outcome = self.self_play(temperature=temperature)
+                    elif game_type == 'random':
                         game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
+                    elif game_type == 'heuristic':
+                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                    elif game_type == 'aggressive':
+                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
+                    elif game_type == 'strong':
+                        game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_strong=True)
+                    elif game_type == 'tactical':
+                        game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
                     else:
-                        # Self-play phase (110-199): 80% self-play, 10% aggressive, 10% heuristic
-                        game_type = np.random.choice(['self_play', 'aggressive', 'heuristic'], 
-                                                    p=[0.80, 0.10, 0.10])
-                        if game_type == 'self_play':
-                            game_memory, outcome = self.self_play(temperature=temperature)
-                        elif game_type == 'aggressive':
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_aggressive=True)
-                        else:
-                            game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=True)
+                        # Fallback to self-play
+                        game_memory, outcome = self.self_play(temperature=temperature)
                     
                     game_outcomes.append(outcome)
                     memory.extend(game_memory)
@@ -818,6 +841,14 @@ class AlphaZeroTrainer:
                 draw_pct = (num_draws / num_games * 100) if num_games > 0 else 0
                 win_pct = (num_wins / num_games * 100) if num_games > 0 else 0
                 loss_pct = (num_losses / num_games * 100) if num_games > 0 else 0
+                
+                # Print sampled game type distribution for verification
+                print(f"🎲 Sampled game types (phase={phase}):")
+                for gt, count in sorted(game_type_counts.items()):
+                    if count > 0:
+                        pct = (count / num_games * 100) if num_games > 0 else 0
+                        expected_pct = probabilities.get(gt, 0) * 100
+                        print(f"   {gt}: {count} ({pct:.1f}%, expected {expected_pct:.1f}%)")
                 
                 print(f"✅ Generated {len(memory)} training samples from {num_games} games")
                 print(f"   Game outcomes: AI wins {num_wins} ({win_pct:.1f}%), Opponent wins {num_losses} ({loss_pct:.1f}%), Draws {num_draws} ({draw_pct:.1f}%)")
@@ -878,6 +909,41 @@ class AlphaZeroTrainer:
                 # Save training history
                 with open(checkpoint_path / "training_history.json", 'w') as f:
                     json.dump(self.history, f, indent=2)
+                
+                # --- Auto-eval hook (non-blocking) ---
+                cfg = self.args
+                if cfg.get('auto_compare_enabled', False):
+                    interval = int(cfg.get('auto_compare_interval', 20))
+                    lookback = int(cfg.get('auto_compare_lookback', 20))
+                    
+                    if (iteration % interval == 0) and (iteration >= lookback):
+                        # Check if previous eval finished
+                        if not hasattr(self, '_compare_proc') or (self._compare_proc.poll() is not None):
+                            # Close previous log handle if any
+                            if hasattr(self, '_compare_log_handle') and self._compare_log_handle is not None:
+                                try:
+                                    self._compare_log_handle.close()
+                                except:
+                                    pass
+                                self._compare_log_handle = None
+                            
+                            # Spawn new eval process
+                            self._spawn_auto_eval(iteration - lookback, iteration)
+                        else:
+                            print('🧪 Auto-eval skipped: previous eval still running')
+                
+                # --- Quick puzzle eval hook (non-blocking) ---
+                if cfg.get('quick_eval_enabled', False):
+                    interval = int(cfg.get('quick_eval_interval', 20))
+                    lookback = int(cfg.get('quick_eval_lookback', 20))
+                    
+                    if (iteration % interval == 0) and (iteration >= lookback):
+                        # Check if previous quick eval finished
+                        if not hasattr(self, '_quick_eval_proc') or (self._quick_eval_proc.poll() is not None):
+                            # Spawn new quick puzzle eval
+                            self._spawn_quick_puzzle_eval(iteration - lookback, iteration)
+                        else:
+                            print('🧩 Quick puzzle eval skipped: previous eval still running')
                 
                 # Calculate iteration time and ETA
                 iteration_end_time = time.time()

@@ -46,48 +46,63 @@ class Node:
         so we negate it to obtain Q from the parent's perspective.
         """
         if child.visit_count == 0:
-            q = 0.0
+            q_parent = 0.0
         else:
-            q = -(child.value_sum / child.visit_count)  # CRITICAL: convert to parent perspective
+            q_child = child.value_sum / child.visit_count
+            q_parent = -q_child  # CRITICAL: convert to parent perspective
         
-        # Standard PUCT exploration term; +1 keeps exploration non-zero at the beginning
+        # Standard PUCT exploration term with proper visit count handling
+        parent_visits = max(1, self.visit_count)
         u = (
             self.args['C']
             * child.prior
-            * (math.sqrt(self.visit_count + 1.0) / (child.visit_count + 1.0))
+            * (math.sqrt(parent_visits) / (1 + child.visit_count))
         )
-        return q + u
+        return q_parent + u
     
     def expand(self, policy):
         # Only expand once - critical bug fix!
         if len(self.children) > 0:
             return  # Already expanded
+        
+        # CRITICAL: Get valid moves and expand ALL legal actions
+        # Even if network assigns zero probability, we must add the child
+        # Otherwise tactical moves (like blocking) can be permanently excluded
+        valid_moves = self.game.get_valid_moves(self.state)
             
-        for action, prob in enumerate(policy):
-            if prob > 0:
-                if isinstance(self.state, torch.Tensor):
-                    child_state = self.state.clone()
-                else:
-                    child_state = self.state.copy()
-                    
-                # Apply the move from current player's perspective
-                child_state = self.game.get_next_state(child_state, action, 1)
+        for action in range(self.game.action_size):
+            # Skip invalid moves
+            if valid_moves[action] == 0:
+                continue
+            
+            # Get probability and clamp to minimum prior
+            # This ensures MCTS can explore all legal moves via UCB exploration term
+            prob = float(policy[action])
+            prob = max(prob, 1e-8)  # Force minimum prior for UCB exploration
+            
+            if isinstance(self.state, torch.Tensor):
+                child_state = self.state.clone()
+            else:
+                child_state = self.state.copy()
                 
-                # CRITICAL FIX: Check terminal state BEFORE flipping perspective
-                # This ensures we check if the action wins for the current player
-                terminal_value, is_terminal = self.game.get_value_and_terminated(child_state, action)
-                
-                # Now flip to opponent's perspective for the child node
-                child_state = self.game.change_perspective(child_state, player=-1)
-                
-                # If terminal from parent's view (value=1 means parent won),
-                # from child's view this is a loss (value=-1)
-                if is_terminal and terminal_value != 0:
-                    terminal_value = -terminal_value
-                
-                child = Node(self.game, self.args, child_state, self, action, prob,
-                           is_terminal=is_terminal, terminal_value=terminal_value)
-                self.children.append(child)
+            # Apply the move from current player's perspective
+            child_state = self.game.get_next_state(child_state, action, 1)
+            
+            # CRITICAL FIX: Check terminal state BEFORE flipping perspective
+            # This ensures we check if the action wins for the current player
+            terminal_value, is_terminal = self.game.get_value_and_terminated(child_state, action)
+            
+            # Now flip to opponent's perspective for the child node
+            child_state = self.game.change_perspective(child_state, player=-1)
+            
+            # If terminal from parent's view (value=1 means parent won),
+            # from child's view this is a loss (value=-1)
+            if is_terminal and terminal_value != 0:
+                terminal_value = -terminal_value
+            
+            child = Node(self.game, self.args, child_state, self, action, prob,
+                       is_terminal=is_terminal, terminal_value=terminal_value)
+            self.children.append(child)
                 
     def backpropagate(self, value):
         self.value_sum += value
@@ -115,8 +130,8 @@ class MCTS:
         root = Node(self.game, self.args, state, visit_count=0)
         
         # Batch size for leaf evaluation
-        # Default to 1 for correctness (sequential updates prevent stale tree)
-        # Can be increased with virtual loss implementation for GPU efficiency
+        # Use configured batch size (default 1 to avoid duplicate-leaf artifacts)
+        # For Connect4 tactics, batch_size=1 is critical to avoid shallow-tree distortion
         batch_size = int(self.args.get('mcts_batch_size', 1))
         batch_size = max(1, min(batch_size, self.args['num_searches']))
         
