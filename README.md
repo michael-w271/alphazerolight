@@ -24,7 +24,7 @@ To train the AlphaZero agent with the configured environment:
 ```bash
 ./run_training.sh
 ```
-This will use the `azl` virtual environment and the settings in `src/alpha_zero_light/config.py`.
+This will use the `azl` virtual environment and the settings in `alpha_zero_light/config_connect4.py`.
 
 ### Play
 To play against the trained AI:
@@ -33,8 +33,12 @@ To play against the trained AI:
 ```
 
 ### Configuration
-You can adjust training parameters in `src/alpha_zero_light/config.py`.
+You can adjust training parameters in `alpha_zero_light/config_connect4.py`.
 The environment configuration is stored in `env_config.sh`.
+
+### Checkpoints
+Trained models and checkpoints are stored in `/mnt/ssd2pro/alpha-zero-checkpoints/connect4/`.
+This external location keeps the repository clean while preserving trained models for local use.
 
 ## Website Showcase
 To view the project showcase website locally:

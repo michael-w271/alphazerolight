@@ -104,9 +104,11 @@ OPPONENT_MIX = {
 }
 
 # Paths Configuration
+# NOTE: Checkpoints are stored externally at /mnt/ssd2pro/alpha-zero-checkpoints/connect4/
+# to keep the repository clean while preserving trained models.
 @dataclass
 class PathConfig:
-    checkpoints: str = "checkpoints/connect4"
+    checkpoints: str = "/mnt/ssd2pro/alpha-zero-checkpoints/connect4"
     logs: str = "logs/connect4"
     plots: str = "docs/training_plots/connect4"
 
