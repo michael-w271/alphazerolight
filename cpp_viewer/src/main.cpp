@@ -12,6 +12,7 @@
 #include "render_board.h"
 #include "render_thinking.h"
 #include "render_metrics.h"
+#include "render_network.h"
 
 using namespace azl;
 
@@ -123,6 +124,7 @@ int main(int argc, char** argv) {
     BoardRenderer board_renderer;
     ThinkingRenderer thinking_renderer;
     MetricsRenderer metrics_renderer;
+    NetworkRenderer network_renderer;
     
     // Main state
     bool running = true;
@@ -198,6 +200,10 @@ int main(int argc, char** argv) {
             // Thinking window (bottom-left) - below status
             ImGui::SetNextWindowPos(ImVec2(10, 200), ImGuiCond_FirstUseEver);
             thinking_renderer.render(current_frame);
+            
+            // Neural Network window (middle-right) - shows how NN thinks
+            ImGui::SetNextWindowPos(ImVec2(700, 300), ImGuiCond_FirstUseEver);
+            network_renderer.render(current_frame);
         }
         
         // Metrics window (right side) - separate column

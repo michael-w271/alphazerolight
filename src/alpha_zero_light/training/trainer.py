@@ -417,14 +417,14 @@ class AlphaZeroTrainer:
                         board=state if not isinstance(state, torch.Tensor) else state.cpu().numpy(),
                         valid_moves=np.zeros(self.game.action_size),
                         policy_head=np.zeros(self.game.action_size),
-                        value_head=value if isinstance(value, float) else value.item(),
+                        value_head=float(value),
                         mcts_policy=np.zeros(self.game.action_size),
                         root_visits=[0] * self.game.action_size,
                         root_q=[0.0] * self.game.action_size,
                         chosen_action=-1,
                         temperature=temperature,
                         is_terminal=True,
-                        terminal_value=value if isinstance(value, float) else value.item()
+                        terminal_value=float(value)
                     )
                 
                 return_memory = []
@@ -858,8 +858,14 @@ class AlphaZeroTrainer:
                 
                 # Get probabilities for current phase
                 probabilities = phase_config.get('probabilities', {})
-                game_types = list(probabilities.keys())
-                game_probs = list(probabilities.values())
+                # Filter out zero-probability game types
+                game_types = [gt for gt, prob in probabilities.items() if prob > 0]
+                game_probs = [probabilities[gt] for gt in game_types]
+                
+                # Fallback if no valid game types
+                if not game_types:
+                    game_types = ['self_play']
+                    game_probs = [1.0]
                 
                 # Track actual game type distribution for verification
                 game_type_counts = {gt: 0 for gt in game_types}

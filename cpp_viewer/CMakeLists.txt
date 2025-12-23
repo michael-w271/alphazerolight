@@ -59,6 +59,7 @@ set(VIEWER_SOURCES
     src/render_board.cpp
     src/render_thinking.cpp
     src/render_metrics.cpp
+    src/render_network.cpp
 )
 
 # Add conda library path if available (MUST be before add_executable)
