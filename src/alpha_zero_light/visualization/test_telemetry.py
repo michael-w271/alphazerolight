@@ -43,7 +43,7 @@ def main():
                 mcts_policy /= mcts_policy.sum()
             
             root_visits = np.random.randint(0, 100, size=7).tolist()
-            root_q = (np.random.randn(7) * 0.5).tolist()
+            root_q = np.clip(np.random.randn(7) * 0.5, -10.0, 10.0).tolist()
             
             # Choose action (handle case where board is full)
             valid_actions = np.where(valid_moves)[0]
@@ -69,7 +69,8 @@ def main():
                 root_q=root_q,
                 chosen_action=chosen_action,
                 temperature=1.0,
-                is_terminal=False
+                is_terminal=False,
+                terminal_value=0.0  # Add this to prevent null in JSON
             )
             
             print(f"📤 Sent frame: iter={iteration}, game={game_idx}, move={move_idx}, action={chosen_action}", end='\r')

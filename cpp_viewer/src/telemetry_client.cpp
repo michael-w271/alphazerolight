@@ -87,6 +87,8 @@ void TelemetryClient::stop() {
 
 void TelemetryClient::receive_loop() {
     char buffer[65536];  // 64KB buffer for JSON messages
+    
+    std::cout << "🔍 Telemetry receiver thread started" << std::endl;
 
     while (running_.load()) {
         int size = zmq_recv(zmq_socket_, buffer, sizeof(buffer) - 1, 0);
@@ -97,11 +99,16 @@ void TelemetryClient::receive_loop() {
 
             try {
                 parse_and_store(std::string(buffer, size));
+                // Print every 50th frame to avoid spam
+                static int msg_count = 0;
+                if (++msg_count % 50 == 0) {
+                    std::cout << "📥 Received " << msg_count << " messages" << std::endl;
+                }
             } catch (const std::exception& e) {
                 std::cerr << "Error parsing telemetry message: " << e.what() << std::endl;
             }
         } else if (size == -1 && zmq_errno() == EAGAIN) {
-            // Timeout - no message received
+            // Timeout - no message received (This is normal, happens every second)
             connected_ = false;
         } else if (size == -1) {
             // Error
@@ -109,6 +116,8 @@ void TelemetryClient::receive_loop() {
             connected_ = false;
         }
     }
+    
+    std::cout << "🔍 Telemetry receiver thread stopped" << std::endl;
 }
 
 void TelemetryClient::parse_and_store(const std::string& json_str) {
@@ -152,6 +161,7 @@ void TelemetryClient::parse_and_store(const std::string& json_str) {
         metrics.total_loss = j["total_loss"];
         metrics.policy_loss = j["policy_loss"];
         metrics.value_loss = j["value_loss"];
+        // Handle optional fields that may be null
         metrics.policy_entropy = j.value("policy_entropy", 0.0f);
         metrics.examples_seen = j.value("examples_seen", 0);
         metrics.eval_winrate = j.value("eval_winrate", 0.0f);

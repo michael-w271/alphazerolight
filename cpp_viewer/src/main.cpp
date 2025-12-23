@@ -178,7 +178,8 @@ int main(int argc, char** argv) {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         
-        // Status window
+        // Status window (top-left)
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
         ImGui::Begin("Status", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
         ImGui::Text("Telemetry: %s", telemetry.is_connected() ? "🟢 Connected" : "🔴 Disconnected");
         ImGui::Text("Frames received: %d", telemetry.get_frames_received());
@@ -188,12 +189,19 @@ int main(int argc, char** argv) {
         ImGui::Text("FPS: %.1f", io.Framerate);
         ImGui::End();
         
-        // Render content windows
+        // Render content windows with positions (like snake.cpp's multiple windows)
         if (has_frame) {
+            // Board window (top-center) - positioned next to status
+            ImGui::SetNextWindowPos(ImVec2(220, 10), ImGuiCond_FirstUseEver);
             board_renderer.render(current_frame);
+            
+            // Thinking window (bottom-left) - below status
+            ImGui::SetNextWindowPos(ImVec2(10, 200), ImGuiCond_FirstUseEver);
             thinking_renderer.render(current_frame);
         }
         
+        // Metrics window (right side) - separate column
+        ImGui::SetNextWindowPos(ImVec2(700, 10), ImGuiCond_FirstUseEver);
         metrics_renderer.render();
         
         // Rendering

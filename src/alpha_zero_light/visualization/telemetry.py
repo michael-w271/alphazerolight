@@ -59,7 +59,8 @@ class TelemetryPublisher:
         print(f"📡 Telemetry publisher bound to {endpoint}")
         
         # Give subscribers time to connect (ZMQ late-joiner issue)
-        time.sleep(0.5)
+        # Increased to 2 seconds to ensure viewer has time to subscribe
+        time.sleep(2.0)
     
     def _send_json(self, message: Dict[str, Any]):
         """Send JSON message (non-blocking)."""

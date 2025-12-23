@@ -64,9 +64,9 @@ void ThinkingRenderer::render_policy_comparison(const FrameMessage& frame) {
         }
         
         ImPlot::SetupAxes("Column", "Probability");
+        ImPlot::SetupLegend(ImPlotLocation_NorthEast);  // MUST be before Plot* calls
         ImPlot::PlotBars("MCTS Policy", x_vals.data(), mcts_vals.data(), x_vals.size(), 0.4, -0.2);
         ImPlot::PlotBars("NN Policy", x_vals.data(), nn_vals.data(), x_vals.size(), 0.4, 0.2);
-        ImPlot::SetupLegend(ImPlotLocation_NorthEast);
         
         ImPlot::EndPlot();
     }
