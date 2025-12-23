@@ -1,0 +1,266 @@
+"""
+Simple heuristic opponent for Connect Four warmup training.
+Uses basic 1-ply lookahead: win if possible, block if necessary, otherwise random.
+"""
+import numpy as np
+
+
+class HeuristicOpponent:
+    """
+    1-ply heuristic opponent for Connect Four.
+    
+    Strategy:
+    1. If I can win (make 4-in-a-row), do it
+    2. If opponent can win next turn, block it
+    3. Otherwise, pick random valid move
+    """
+    
+    def __init__(self, game):
+        self.game = game
+    
+    def get_action(self, state, player):
+        """
+        Get best heuristic move for given position.
+        
+        Args:
+            state: Current board state
+            player: Player making the move (1 or -1)
+        
+        Returns:
+            Column index (action)
+        """
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        if len(valid_actions) == 0:
+            raise ValueError("No valid moves available")
+        
+        # 1. Check if we can win
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 2. Check if opponent can win (we must block)
+        opponent = -player
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, opponent)
+            if self.game.check_win(next_state, action):
+                # Opponent would win here, we must block
+                return action
+        
+        # 3. No immediate threats - pick random move
+        # Slight preference for center columns (better Connect Four strategy)
+        center = self.game.column_count // 2
+        weights = np.array([1.0 / (1.0 + abs(i - center)) for i in valid_actions])
+        weights /= weights.sum()
+        
+        return np.random.choice(valid_actions, p=weights)
+    
+    def get_action_aggressive(self, state, player):
+        """
+        Aggressive opponent that actively creates threats.
+        
+        Strategy:
+        1. If I can win, do it
+        2. If opponent can win, block it
+        3. Try to create a 3-in-a-row threat
+        4. Otherwise random (prefer center)
+        
+        This forces the model to constantly practice blocking.
+        """
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        if len(valid_actions) == 0:
+            raise ValueError("No valid moves available")
+        
+        # 1. Check if we can win
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 2. Check if opponent can win (must block)
+        opponent = -player
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, opponent)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 3. Try to create a 3-in-a-row threat (aggressive play)
+        best_threat_action = None
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            if self._creates_threat(next_state, action, player):
+                best_threat_action = action
+                break  # Take first threat found
+        
+        if best_threat_action is not None:
+            return best_threat_action
+        
+        # 4. No threats possible - prefer center
+        center = self.game.column_count // 2
+        weights = np.array([1.0 / (1.0 + abs(i - center)) for i in valid_actions])
+        weights /= weights.sum()
+        
+        return np.random.choice(valid_actions, p=weights)
+    
+    def _creates_threat(self, state, last_action, player):
+        """
+        Check if the last move created a 3-in-a-row threat.
+        A threat is 3 pieces in a line with an empty space to complete 4.
+        """
+        # This is a simplified check - just look for 3 in any direction
+        # In Connect Four, if we have 3 in a row, it's usually threatening
+        
+        # Get the position of the last piece
+        col = last_action
+        row = 0
+        for r in range(self.game.row_count):
+            if state[r, col] == player:
+                row = r
+                break
+        
+        # Check all 4 directions for sequences of 3
+        directions = [
+            (0, 1),   # Horizontal
+            (1, 0),   # Vertical
+            (1, 1),   # Diagonal /
+            (1, -1),  # Diagonal \
+        ]
+        
+        for dr, dc in directions:
+            count = 1  # Count the piece we just placed
+            
+            # Count in positive direction
+            r, c = row + dr, col + dc
+            while (0 <= r < self.game.row_count and 
+                   0 <= c < self.game.column_count and 
+                   state[r, c] == player):
+                count += 1
+                r += dr
+                c += dc
+            
+            # Count in negative direction
+            r, c = row - dr, col - dc
+            while (0 <= r < self.game.row_count and 
+                   0 <= c < self.game.column_count and 
+                   state[r, c] == player):
+                count += 1
+                r -= dr
+                c -= dc
+            
+            # If we have 3 in a row, it's a threat
+            if count >= 3:
+                return True
+        
+        return False
+
+    def get_action_strong(self, state, player):
+        """
+        Strong 2-ply opponent with center opening preference.
+        
+        Strategy:
+        1. Always open center (column 3) if first move
+        2. If I can win, do it
+        3. If opponent can win, block it
+        4. Use 2-ply lookahead to find moves that create forcing sequences
+        5. Prefer center columns otherwise
+        
+        This provides stronger opposition in later warmup phases.
+        """
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        if len(valid_actions) == 0:
+            raise ValueError("No valid moves available")
+        
+        # 1. Always open center if board is empty
+        if np.all(state == 0):
+            center = self.game.column_count // 2
+            if center in valid_actions:
+                return center
+        
+        # 2. Check if we can win immediately
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 3. Check if opponent can win (must block)
+        opponent = -player
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, opponent)
+            if self.game.check_win(next_state, action):
+                return action
+        
+        # 4. 2-ply lookahead: find moves that create multiple threats
+        best_action = None
+        best_score = -float('inf')
+        
+        for action in valid_actions:
+            next_state = self.game.get_next_state(state, action, player)
+            score = self._evaluate_position_2ply(next_state, action, player)
+            
+            if score > best_score:
+                best_score = score
+                best_action = action
+        
+        if best_action is not None:
+            return best_action
+        
+        # 5. Fallback: prefer center
+        center = self.game.column_count // 2
+        weights = np.array([1.0 / (1.0 + abs(i - center)) for i in valid_actions])
+        weights /= weights.sum()
+        
+        return np.random.choice(valid_actions, p=weights)
+    
+    def _evaluate_position_2ply(self, state, last_action, player):
+        """
+        Evaluate position with 2-ply lookahead.
+        Returns higher score for positions with more threats/opportunities.
+        """
+        score = 0
+        opponent = -player
+        
+        # Check if this move creates a threat
+        if self._creates_threat(state, last_action, player):
+            score += 10
+        
+        # Look ahead one more ply: can we create a winning position next move?
+        valid_moves = self.game.get_valid_moves(state)
+        valid_actions = np.where(valid_moves == 1)[0]
+        
+        for next_action in valid_actions:
+            next_state = self.game.get_next_state(state, next_action, player)
+            
+            # Can we win next move?
+            if self.game.check_win(next_state, next_action):
+                score += 50
+            # Does this create multiple threats?
+            elif self._creates_threat(next_state, next_action, player):
+                score += 5
+        
+        # Penalty if opponent can create threats from this position
+        for next_action in valid_actions:
+            next_state = self.game.get_next_state(state, next_action, opponent)
+            if self.game.check_win(next_state, next_action):
+                score -= 30  # Opponent could win
+            elif self._creates_threat(next_state, next_action, opponent):
+                score -= 3
+        
+        return score
+
+    def select_action(self, state, player):
+        """Wrapper for basic 1-ply heuristic"""
+        return self.get_action(state, player)
+    
+    def select_aggressive_action(self, state, player):
+        """Wrapper for aggressive heuristic"""
+        return self.get_action_aggressive(state, player)
+    
+    def select_strong_action(self, state, player):
+        """Wrapper for strong 2-ply heuristic"""
+        return self.get_action_strong(state, player)
