@@ -61,6 +61,12 @@ set(VIEWER_SOURCES
     src/render_metrics.cpp
 )
 
+# Add conda library path if available (MUST be before add_executable)
+if(DEFINED ENV{CONDA_PREFIX})
+    link_directories($ENV{CONDA_PREFIX}/lib)
+    message(STATUS "Added conda lib path: $ENV{CONDA_PREFIX}/lib")
+endif()
+
 # Executable
 add_executable(azl_viewer 
     ${VIEWER_SOURCES}

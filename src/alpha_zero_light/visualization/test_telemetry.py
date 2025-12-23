@@ -45,7 +45,14 @@ def main():
             root_visits = np.random.randint(0, 100, size=7).tolist()
             root_q = (np.random.randn(7) * 0.5).tolist()
             
-            chosen_action = np.random.choice(np.where(valid_moves)[0])
+            # Choose action (handle case where board is full)
+            valid_actions = np.where(valid_moves)[0]
+            if len(valid_actions) == 0:
+                # Board full, start new game
+                move_idx = 0
+                game_idx += 1
+                continue
+            chosen_action = np.random.choice(valid_actions)
             
             # Send frame
             publisher.send_frame(
