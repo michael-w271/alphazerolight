@@ -163,7 +163,7 @@ def _worker_self_play_games(args):
 
 
 class AlphaZeroTrainer:
-    def __init__(self, model, optimizer, game, args, mcts, evaluator=None):
+    def __init__(self, model, optimizer, game, args, mcts, evaluator=None, telemetry=None):
         self.model = model
         self.optimizer = optimizer
         self.game = game
@@ -172,6 +172,7 @@ class AlphaZeroTrainer:
         self.evaluator = evaluator
         self.heuristic_opponent = HeuristicOpponent(game)
         self.tactical_trainer = TacticalTrainer(game)
+        self.telemetry = telemetry  # Optional telemetry publisher for live visualization
         
         # Training history
         self.history = {
@@ -348,10 +349,11 @@ class AlphaZeroTrainer:
             
             player = self.game.get_opponent(player)
 
-    def self_play(self, temperature=None):
+    def self_play(self, temperature=None, iteration=0, game_idx=0):
         memory = []
         player = 1
         state = self.game.get_initial_state()
+        move_idx = 0
         
         # Use provided temperature or fall back to config
         if temperature is None:
@@ -359,7 +361,13 @@ class AlphaZeroTrainer:
         
         while True:
             neutral_state = self.game.change_perspective(state, player)
-            action_probs = self.mcts.search(neutral_state)
+            
+            # Get MCTS result with root stats for telemetry
+            if self.telemetry:
+                action_probs, root_stats = self.mcts.search(neutral_state, return_root=True)
+            else:
+                action_probs = self.mcts.search(neutral_state)
+                root_stats = None
             
             memory.append((neutral_state, action_probs, player))
             
@@ -367,11 +375,58 @@ class AlphaZeroTrainer:
             temperature_action_probs /= np.sum(temperature_action_probs)
             action = np.random.choice(self.game.action_size, p=temperature_action_probs)
             
+            # Emit telemetry frame before taking action
+            if self.telemetry and root_stats:
+                # Get network policy/value for current state
+                with torch.no_grad():
+                    encoded_state = self.game.get_encoded_state(neutral_state)
+                    state_tensor = torch.tensor(encoded_state, dtype=torch.float32, device=self.model.device).unsqueeze(0)
+                    policy, value = self.model(state_tensor)
+                    policy_head = torch.softmax(policy, dim=1).cpu().numpy()[0]
+                    value_head = value.cpu().numpy()[0, 0]
+                
+                self.telemetry.send_frame(
+                    iteration=iteration,
+                    game_idx=game_idx,
+                    move_idx=move_idx,
+                    player=player,
+                    board=neutral_state if not isinstance(neutral_state, torch.Tensor) else neutral_state.cpu().numpy(),
+                    valid_moves=self.game.get_valid_moves(neutral_state),
+                    policy_head=policy_head,
+                    value_head=value_head,
+                    mcts_policy=action_probs,
+                    root_visits=root_stats['root_visits'].tolist(),
+                    root_q=root_stats['root_q'].tolist(),
+                    chosen_action=action,
+                    temperature=temperature,
+                    is_terminal=False
+                )
+            
             state = self.game.get_next_state(state, action, player)
             
             value, is_terminal = self.game.get_value_and_terminated(state, action)
             
             if is_terminal:
+                # Send terminal frame if telemetry enabled
+                if self.telemetry and root_stats:
+                    self.telemetry.send_frame(
+                        iteration=iteration,
+                        game_idx=game_idx,
+                        move_idx=move_idx + 1,
+                        player=player,
+                        board=state if not isinstance(state, torch.Tensor) else state.cpu().numpy(),
+                        valid_moves=np.zeros(self.game.action_size),
+                        policy_head=np.zeros(self.game.action_size),
+                        value_head=value if isinstance(value, float) else value.item(),
+                        mcts_policy=np.zeros(self.game.action_size),
+                        root_visits=[0] * self.game.action_size,
+                        root_q=[0.0] * self.game.action_size,
+                        chosen_action=-1,
+                        temperature=temperature,
+                        is_terminal=True,
+                        terminal_value=value if isinstance(value, float) else value.item()
+                    )
+                
                 return_memory = []
                 for hist_neutral_state, hist_action_probs, hist_player in memory:
                     hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
@@ -385,6 +440,7 @@ class AlphaZeroTrainer:
                 return return_memory, model_outcome
             
             player = self.game.get_opponent(player)
+            move_idx += 1
     
     def _parallel_self_play_multicore(self, num_workers, temperature, in_warmup_phase, warmup_iteration, random_opponent_iters):
         """Run self-play games in parallel across multiple CPU cores"""
@@ -882,6 +938,16 @@ class AlphaZeroTrainer:
                 self.history['total_loss'].append(avg_loss)
                 self.history['policy_loss'].append(avg_policy_loss)
                 self.history['value_loss'].append(avg_value_loss)
+                
+                # Send telemetry metrics if enabled
+                if self.telemetry:
+                    self.telemetry.send_metrics(
+                        iteration=iteration,
+                        total_loss=avg_loss,
+                        policy_loss=avg_policy_loss,
+                        value_loss=avg_value_loss,
+                        examples_seen=len(memory) * self.args['num_epochs']
+                    )
                 
                 # Evaluation - TEMPORARILY DISABLED
                 # if self.evaluator and (iteration % self.args.get('eval_frequency', 5) == 0 or iteration == self.args['num_iterations'] - 1):

@@ -119,10 +119,20 @@ class MCTS:
         self.model = model
         
     @torch.no_grad()
-    def search(self, state, add_noise=True, temperature=None):
+    def search(self, state, add_noise=True, temperature=None, return_root=False):
         """
         MCTS search with GPU-optimized batched inference.
         Collects multiple leaf nodes and evaluates them together for better GPU utilization.
+        
+        Args:
+            state: Game state to search from
+            add_noise: Whether to add Dirichlet noise to root  (exploration)
+            temperature: Temperature for action selection (None = use config default)
+            return_root: If True, return (action_probs, root_stats) instead of just action_probs
+        
+        Returns:
+            action_probs: Numpy array of action probabilities
+            root_stats (optional): Dict with 'root_visits' and 'root_q' if return_root=True
         """
         import os
         debug = os.environ.get('DEBUG_MCTS') == '1'
@@ -241,6 +251,25 @@ class MCTS:
             # Temperature-based sampling
             action_probs = action_probs ** (1.0 / temperature)
             action_probs /= np.sum(action_probs)
+        
+        # Optionally return root statistics for visualization
+        if return_root:
+            root_stats = {
+                'root_visits': np.zeros(self.game.action_size, dtype=int),
+                'root_q': np.zeros(self.game.action_size, dtype=float)
+            }
+            
+            for child in root.children:
+                action = child.action_taken
+                root_stats['root_visits'][action] = child.visit_count
+                # Q-value from parent's (root's) perspective
+                if child.visit_count > 0:
+                    q_child = child.value_sum / child.visit_count
+                    root_stats['root_q'][action] = -q_child  # Convert to root perspective
+                else:
+                    root_stats['root_q'][action] = 0.0
+            
+            return action_probs, root_stats
             
         return action_probs
 
