@@ -10,17 +10,37 @@ void BoardRenderer::render(const FrameMessage& frame) {
     
     draw_info(frame);
     ImGui::Spacing();
+    
+    // Get canvas position before drawing grid
+    ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
     draw_grid();
     
-    // Draw discs
+    // Draw discs on top of the grid
     if (!frame.board.empty()) {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        
         for (int row = 0; row < ROWS && row < static_cast<int>(frame.board.size()); row++) {
             for (int col = 0; col < COLS && col < static_cast<int>(frame.board[row].size()); col++) {
                 int player = frame.board[row][col];
                 if (player != 0) {
-                    // Highlight last move
-                    bool highlight = (frame.chosen_action == col && !frame.is_terminal);
-                    draw_disc(row, col, player, highlight);
+                    // Calculate disc center
+                    float center_x = canvas_pos.x + col * CELL_SIZE + CELL_SIZE / 2;
+                    float center_y = canvas_pos.y + row * CELL_SIZE + CELL_SIZE / 2;
+                    ImVec2 center(center_x, center_y);
+                    
+                    // Color based on player
+                    ImU32 color = player == 1 
+                        ? IM_COL32(220, 50, 50, 255)   // Red for +1
+                        : IM_COL32(255, 220, 50, 255); // Yellow for -1
+                    
+                    // Highlight last move with a green ring
+                    bool is_last_move = (frame.chosen_action == col && !frame.is_terminal);
+                    if (is_last_move) {
+                        draw_list->AddCircle(center, DISC_RADIUS + 5, IM_COL32(0, 255, 0, 255), 32, 3.0f);
+                    }
+                    
+                    // Draw disc (filled circle)
+                    draw_list->AddCircleFilled(center, DISC_RADIUS, color, 32);
                 }
             }
         }
@@ -76,34 +96,6 @@ void BoardRenderer::draw_grid() {
     
     // Reserve space for the board
     ImGui::Dummy(board_size);
-}
-
-void BoardRenderer::draw_disc(int row, int col, int player, bool highlight) {
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
-    
-    // Calculate disc center (need to offset by board position)
-    // NOTE: This is simplified - in practice we'd track canvas_pos from draw_grid
-    float center_x = col * CELL_SIZE + CELL_SIZE / 2;
-    float center_y = row * CELL_SIZE + CELL_SIZE / 2;
-    
-    // Color based on player
-    ImU32 color = player == 1 
-        ? IM_COL32(220, 50, 50, 255)   // Red for +1
-        : IM_COL32(255, 220, 50, 255); // Yellow for -1
-    
-    // Draw disc (filled circle)
-    // Note: This simplified version won't position correctly without proper canvas tracking
-    // A full implementation would cache canvas_pos from draw_grid and use it here
-    
-    if (highlight) {
-        // Draw highlight ring
-        // draw_list->AddCircle(center, DISC_RADIUS + 5, IM_COL32(0, 255, 0, 255), 32, 3.0f);
-    }
-    
-    // draw_list->AddCircleFilled(center, DISC_RADIUS, color, 32);
-    
-    // TODO: Fix positioning - need to track canvas origin from draw_grid
 }
 
 }  // namespace azl

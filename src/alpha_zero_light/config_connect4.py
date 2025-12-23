@@ -61,7 +61,7 @@ TRAINING_CONFIG = {
 # MCTS Configuration
 MCTS_CONFIG = {
     'C': 2.0,                           
-    'num_searches': 100,                # Increased to 100 for better play quality
+    'num_searches': 50,                 # Reduced to 50 for faster training/visualization
     'dirichlet_alpha': 0.3,             # Exploration noise (lower = more concentrated)
     'dirichlet_epsilon': 0.25,          # Fraction of noise to add to root
     'mcts_batch_size': 1,

@@ -17,7 +17,6 @@ public:
     
 private:
     void draw_grid();
-    void draw_disc(int row, int col, int player, bool highlight = false);
     void draw_info(const FrameMessage& frame);
     
     static constexpr float CELL_SIZE = 60.0f;
