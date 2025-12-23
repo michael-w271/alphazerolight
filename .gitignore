@@ -17,3 +17,4 @@ training_progress.json
 
 # Large model files
 *.pt
+Snake-neural-network/
