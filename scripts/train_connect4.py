@@ -10,6 +10,7 @@ from alpha_zero_light.model.network import ResNet
 from alpha_zero_light.mcts.mcts import MCTS
 from alpha_zero_light.training.trainer import AlphaZeroTrainer
 from alpha_zero_light.training.evaluator import Evaluator
+from alpha_zero_light.visualization.telemetry import TelemetryPublisher
 from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL_CONFIG, PATHS, OPPONENT_MIX
 
 def main():
@@ -50,8 +51,18 @@ def main():
     # Create evaluator
     evaluator = Evaluator(game, model, mcts)
     
-    # Create trainer
-    trainer = AlphaZeroTrainer(model, optimizer, game, args, mcts, evaluator)
+    # Initialize telemetry publisher for live visualization
+    print("📡 Initializing telemetry publisher for C++ viewer...")
+    telemetry = TelemetryPublisher(
+        endpoint="tcp://127.0.0.1:5556",
+        send_frame_frequency=1,      # Send every move
+        send_metrics_frequency=1,     # Send every iteration
+        send_net_summary_frequency=5  # Send network summary every 5 iterations
+    )
+    print("✅ Telemetry ready - C++ viewer can connect now\n")
+    
+    # Create trainer with telemetry
+    trainer = AlphaZeroTrainer(model, optimizer, game, args, mcts, evaluator, telemetry)
     
     # Print configuration
     print("Training Configuration:")

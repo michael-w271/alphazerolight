@@ -204,6 +204,10 @@ int main(int argc, char** argv) {
             // Neural Network window (middle-right) - shows how NN thinks
             ImGui::SetNextWindowPos(ImVec2(700, 300), ImGuiCond_FirstUseEver);
             network_renderer.render(current_frame);
+            
+            // NEW: ResNet Architecture Visualization (bottom-right) - Snake.cpp style!
+            ImGui::SetNextWindowPos(ImVec2(700, 600), ImGuiCond_FirstUseEver);
+            network_renderer.render_architecture(current_frame);
         }
         
         // Metrics window (right side) - separate column
