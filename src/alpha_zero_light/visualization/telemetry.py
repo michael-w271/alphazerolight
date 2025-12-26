@@ -91,7 +91,9 @@ class TelemetryPublisher:
                    mcts_policy: np.ndarray, root_visits: List[int],
                    root_q: List[float], chosen_action: int,
                    temperature: float, is_terminal: bool,
-                   terminal_value: Optional[float] = None):
+                   terminal_value: Optional[float] = None,
+                   policy_entropy: Optional[float] = None,
+                   mcts_improvement: Optional[float] = None):
         """
         Send a frame telemetry message (game state + MCTS thinking).
         
@@ -111,10 +113,22 @@ class TelemetryPublisher:
             temperature: Temperature used for action selection
             is_terminal: Whether game ended after this move
             terminal_value: Final game value if terminal
+            policy_entropy: Shannon entropy of policy distribution
+            mcts_improvement: How much MCTS improved over raw policy
         """
         self._frame_counter += 1
         if self._frame_counter % self.send_frame_frequency != 0:
             return
+        
+        # Calculate policy entropy if not provided
+        if policy_entropy is None and policy_head is not None:
+            policy_entropy = self._calculate_entropy(policy_head)
+        
+        # Default values for missing metrics
+        if policy_entropy is None:
+            policy_entropy = 0.0
+        if mcts_improvement is None:
+            mcts_improvement = 0.0
         
         message = {
             'type': 'frame',
@@ -133,17 +147,31 @@ class TelemetryPublisher:
             'chosen_action': chosen_action,
             'temperature': temperature,
             'is_terminal': is_terminal,
-            'terminal_value': terminal_value
+            'terminal_value': terminal_value if terminal_value is not None else 0.0,
+            'policy_entropy': policy_entropy,
+            'mcts_improvement': mcts_improvement
         }
         
         self._send_json(message)
+    
+    @staticmethod
+    def _calculate_entropy(distribution: np.ndarray) -> float:
+        """Calculate Shannon entropy of a probability distribution."""
+        # Filter out zeros to avoid log(0)
+        probs = distribution[distribution > 1e-10]
+        if len(probs) == 0:
+            return 0.0
+        return float(-np.sum(probs * np.log(probs + 1e-10)))
     
     def send_metrics(self, iteration: int, total_loss: float,
                      policy_loss: float, value_loss: float,
                      policy_entropy: Optional[float] = None,
                      examples_seen: Optional[int] = None,
                      eval_winrate: Optional[float] = None,
-                     avg_game_length: Optional[float] = None):
+                     avg_game_length: Optional[float] = None,
+                     gradient_norms: Optional[Dict[str, float]] = None,
+                     policy_sharpness: Optional[float] = None,
+                     mcts_improvement_avg: Optional[float] = None):
         """
         Send training metrics telemetry message.
         
@@ -152,26 +180,33 @@ class TelemetryPublisher:
             total_loss: Combined loss value
             policy_loss: Policy head loss
             value_loss: Value head loss
-            policy_entropy: Optional policy entropy metric
-            examples_seen: Optional total training examples processed
-            eval_winrate: Optional evaluation win rate
-            avg_game_length: Optional average game length
+            policy_entropy: Average policy entropy this iteration
+            examples_seen: Total training examples processed
+            eval_winrate: Evaluation win rate
+            avg_game_length: Average game length this iteration
+            gradient_norms: Dict of gradient norms by layer group
+            policy_sharpness: Average policy sharpness (confidence)
+            mcts_improvement_avg: Average MCTS improvement factor
         """
         self._metrics_counter += 1
         if self._metrics_counter % self.send_metrics_frequency != 0:
             return
         
+        # Ensure no None values are sent
         message = {
             'type': 'metrics',
             'timestamp_ms': int(time.time() * 1000),
             'iteration': iteration,
-            'total_loss': total_loss,
-            'policy_loss': policy_loss,
-            'value_loss': value_loss,
-            'policy_entropy': policy_entropy,
-            'examples_seen': examples_seen,
-            'eval_winrate': eval_winrate,
-            'avg_game_length': avg_game_length
+            'total_loss': float(total_loss) if total_loss is not None else 0.0,
+            'policy_loss': float(policy_loss) if policy_loss is not None else 0.0,
+            'value_loss': float(value_loss) if value_loss is not None else 0.0,
+            'policy_entropy': float(policy_entropy) if policy_entropy is not None else 0.0,
+            'examples_seen': int(examples_seen) if examples_seen is not None else 0,
+            'eval_winrate': float(eval_winrate) if eval_winrate is not None else 0.0,
+            'avg_game_length': float(avg_game_length) if avg_game_length is not None else 0.0,
+            'gradient_norms': gradient_norms if gradient_norms is not None else {},
+            'policy_sharpness': float(policy_sharpness) if policy_sharpness is not None else 0.0,
+            'mcts_improvement_avg': float(mcts_improvement_avg) if mcts_improvement_avg is not None else 0.0
         }
         
         self._send_json(message)

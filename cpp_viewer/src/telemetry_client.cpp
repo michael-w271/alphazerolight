@@ -142,6 +142,8 @@ void TelemetryClient::parse_and_store(const std::string& json_str) {
         frame.temperature = j["temperature"];
         frame.is_terminal = j["is_terminal"];
         frame.terminal_value = j.value("terminal_value", 0.0f);
+        frame.policy_entropy = j.value("policy_entropy", 0.0f);
+        frame.mcts_improvement = j.value("mcts_improvement", 0.0f);
 
         {
             std::lock_guard<std::mutex> lock(frame_mutex_);
@@ -166,6 +168,13 @@ void TelemetryClient::parse_and_store(const std::string& json_str) {
         metrics.examples_seen = j.value("examples_seen", 0);
         metrics.eval_winrate = j.value("eval_winrate", 0.0f);
         metrics.avg_game_length = j.value("avg_game_length", 0.0f);
+        
+        // Parse new advanced metrics
+        if (j.contains("gradient_norms") && !j["gradient_norms"].is_null()) {
+            metrics.gradient_norms = j["gradient_norms"].get<std::map<std::string, float>>();
+        }
+        metrics.policy_sharpness = j.value("policy_sharpness", 0.0f);
+        metrics.mcts_improvement_avg = j.value("mcts_improvement_avg", 0.0f);
 
         {
             std::lock_guard<std::mutex> lock(metrics_mutex_);

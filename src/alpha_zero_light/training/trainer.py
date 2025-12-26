@@ -725,12 +725,49 @@ class AlphaZeroTrainer:
         sys.stdout.flush()
         return all_memory
 
+    def compute_gradient_norms(self):
+        """Compute gradient norms by layer group for monitoring learning dynamics"""
+        grad_norms = {}
+        
+        for name, param in self.model.named_parameters():
+            if param.grad is not None:
+                # Group gradients by module type
+                if 'conv_block' in name:
+                    key = 'conv_block'
+                elif 'res_blocks' in name:
+                    # Extract block number
+                    parts = name.split('.')
+                    if len(parts) > 1 and parts[1].isdigit():
+                        key = f'res_block_{parts[1]}'
+                    else:
+                        key = 'res_blocks'
+                elif 'policy_head' in name:
+                    key = 'policy_head'
+                elif 'value_head' in name:
+                    key = 'value_head'
+                else:
+                    key = 'other'
+                
+                # Compute L2 norm of gradients
+                grad_norm = param.grad.data.norm(2).item()
+                
+                if key in grad_norms:
+                    grad_norms[key] += grad_norm
+                else:
+                    grad_norms[key] = grad_norm
+        
+        return grad_norms
+
     def train(self, memory):
         random.shuffle(memory)
         total_loss = 0
         total_policy_loss = 0
         total_value_loss = 0
         num_batches = 0
+        
+        # Track gradient norms and policy statistics
+        all_grad_norms = []
+        all_policy_outputs = []
         
         for batch_idx in range(0, len(memory), self.args['batch_size']):
             sample = memory[batch_idx:min(len(memory), batch_idx + self.args['batch_size'])]
@@ -749,6 +786,10 @@ class AlphaZeroTrainer:
             
             out_policy, out_value = self.model(state)
             
+            # Collect policy outputs for sharpness calculation
+            policy_probs = torch.nn.functional.softmax(out_policy, dim=1)
+            all_policy_outputs.append(policy_probs.detach().cpu().numpy())
+            
             policy_loss = torch.nn.functional.cross_entropy(out_policy, policy_targets)
             value_loss = torch.nn.functional.mse_loss(out_value, value_targets)
             
@@ -759,6 +800,11 @@ class AlphaZeroTrainer:
             
             self.optimizer.zero_grad()
             loss.backward()
+            
+            # Compute gradient norms after backward pass
+            grad_norms = self.compute_gradient_norms()
+            all_grad_norms.append(grad_norms)
+            
             self.optimizer.step()
             
             total_loss += loss.item()
@@ -766,7 +812,24 @@ class AlphaZeroTrainer:
             total_value_loss += value_loss.item()
             num_batches += 1
         
-        return total_loss / num_batches, total_policy_loss / num_batches, total_value_loss / num_batches
+        # Average gradient norms across batches
+        avg_grad_norms = {}
+        if all_grad_norms:
+            all_keys = set()
+            for gn in all_grad_norms:
+                all_keys.update(gn.keys())
+            for key in all_keys:
+                avg_grad_norms[key] = np.mean([gn.get(key, 0) for gn in all_grad_norms])
+        
+        # Compute policy sharpness (max probability averaged across batch)
+        policy_sharpness = 0.0
+        if all_policy_outputs:
+            all_probs = np.concatenate(all_policy_outputs, axis=0)
+            max_probs = np.max(all_probs, axis=1)
+            policy_sharpness = float(np.mean(max_probs))
+        
+        return (total_loss / num_batches, total_policy_loss / num_batches, 
+                total_value_loss / num_batches, avg_grad_norms, policy_sharpness)
             
     def learn(self, checkpoint_dir='checkpoints'):
         """
@@ -921,20 +984,35 @@ class AlphaZeroTrainer:
                 epoch_losses = []
                 epoch_policy_losses = []
                 epoch_value_losses = []
+                all_epoch_grad_norms = []
+                all_epoch_policy_sharpness = []
                 
                 print(f"🧠 Training neural network ({self.args['num_epochs']} epochs)...")
                 sys.stdout.flush()
                 
                 # Show epoch progress with tqdm
                 for epoch in tqdm(range(self.args['num_epochs']), desc="Training", ncols=80):
-                    loss, policy_loss, value_loss = self.train(memory)
+                    loss, policy_loss, value_loss, grad_norms, policy_sharpness = self.train(memory)
                     epoch_losses.append(loss)
                     epoch_policy_losses.append(policy_loss)
                     epoch_value_losses.append(value_loss)
+                    all_epoch_grad_norms.append(grad_norms)
+                    all_epoch_policy_sharpness.append(policy_sharpness)
                 
                 avg_loss = np.mean(epoch_losses)
                 avg_policy_loss = np.mean(epoch_policy_losses)
                 avg_value_loss = np.mean(epoch_value_losses)
+                
+                # Average gradient norms across epochs
+                avg_grad_norms = {}
+                if all_epoch_grad_norms:
+                    all_keys = set()
+                    for gn in all_epoch_grad_norms:
+                        all_keys.update(gn.keys())
+                    for key in all_keys:
+                        avg_grad_norms[key] = float(np.mean([gn.get(key, 0) for gn in all_epoch_grad_norms]))
+                
+                avg_policy_sharpness = float(np.mean(all_epoch_policy_sharpness)) if all_epoch_policy_sharpness else 0.0
                 
                 print(f"📊 Loss: {avg_loss:.4f} (Policy: {avg_policy_loss:.4f}, Value: {avg_value_loss:.4f})")
                 sys.stdout.flush()
@@ -952,7 +1030,10 @@ class AlphaZeroTrainer:
                         total_loss=avg_loss,
                         policy_loss=avg_policy_loss,
                         value_loss=avg_value_loss,
-                        examples_seen=len(memory) * self.args['num_epochs']
+                        examples_seen=len(memory) * self.args['num_epochs'],
+                        gradient_norms=avg_grad_norms,
+                        policy_sharpness=avg_policy_sharpness,
+                        mcts_improvement_avg=0.0  # Will implement MCTS improvement tracking later
                     )
                 
                 # Evaluation - TEMPORARILY DISABLED

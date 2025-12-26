@@ -31,6 +31,8 @@ struct FrameMessage {
     float temperature;
     bool is_terminal;
     float terminal_value;
+    float policy_entropy;       // NEW: Shannon entropy of policy
+    float mcts_improvement;     // NEW: How much MCTS improved over raw policy
 };
 
 // Metrics message: training stats per iteration
@@ -44,6 +46,9 @@ struct MetricsMessage {
     int examples_seen;
     float eval_winrate;
     float avg_game_length;
+    std::map<std::string, float> gradient_norms;  // NEW: Gradient norms by layer
+    float policy_sharpness;                        // NEW: Policy confidence metric
+    float mcts_improvement_avg;                    // NEW: Average MCTS improvement
 };
 
 // Network summary message: layer norms and activations  

@@ -1,0 +1,462 @@
+{
+  "visualization_roadmap": {
+    "overview": "Enhanced AlphaZero training visualization showing model improvement over time",
+    "priority_phases": [
+      {
+        "phase": 1,
+        "name": "Core Learning Metrics",
+        "items": ["1.1", "1.2", "1.3", "2.1", "2.2", "4.1"]
+      },
+      {
+        "phase": 2,
+        "name": "Network Analysis",
+        "items": ["3.1", "3.2", "3.3", "5.1", "5.2"]
+      },
+      {
+        "phase": 3,
+        "name": "Strategic Understanding",
+        "items": ["6.1", "8.1", "8.2", "10.1", "10.2"]
+      },
+      {
+        "phase": 4,
+        "name": "Advanced Analytics",
+        "items": ["7.1", "7.2", "9.1", "9.2"]
+      }
+    ],
+    "tasks": [
+      {
+        "id": "1.1",
+        "category": "Enhanced Metrics Timeline",
+        "title": "Add policy entropy tracking to telemetry",
+        "description": "Compute and send Shannon entropy of policy outputs after each move",
+        "files_to_modify": [
+          "src/alpha_zero_light/visualization/telemetry.py",
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Add policy_entropy field to send_frame() method",
+          "Calculate entropy: -sum(p * log(p)) for policy distribution",
+          "Store entropy history in trainer for per-iteration stats"
+        ],
+        "estimated_time": "30min"
+      },
+      {
+        "id": "1.2",
+        "category": "Enhanced Metrics Timeline",
+        "title": "Add gradient norm tracking",
+        "description": "Track gradient magnitudes per layer group during training",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py",
+          "src/alpha_zero_light/visualization/telemetry.py"
+        ],
+        "implementation": [
+          "Hook into optimizer step to capture gradient norms",
+          "Group by layer type (conv, resblock, policy_head, value_head)",
+          "Send gradient_norms dict via telemetry",
+          "Store min/max/avg per iteration"
+        ],
+        "estimated_time": "45min"
+      },
+      {
+        "id": "1.3",
+        "category": "Enhanced Metrics Timeline",
+        "title": "Create enhanced metrics window in C++ viewer",
+        "description": "Multi-plot window showing loss, entropy, gradients over time",
+        "files_to_modify": [
+          "cpp_viewer/src/render_metrics.h",
+          "cpp_viewer/src/render_metrics.cpp",
+          "cpp_viewer/src/telemetry_client.h"
+        ],
+        "implementation": [
+          "Add ImPlot subplots for: total_loss, policy_entropy, value_loss, gradient_norms",
+          "Use ring buffers to store last 100 iterations",
+          "Color-code by training phase (bootstrap/main/late)",
+          "Add Y-axis autoscaling and legends"
+        ],
+        "estimated_time": "60min"
+      },
+      {
+        "id": "2.1",
+        "category": "Learning Dynamics Dashboard",
+        "title": "Track MCTS improvement factor",
+        "description": "Measure how much MCTS search improves over raw network policy",
+        "files_to_modify": [
+          "src/alpha_zero_light/mcts/mcts.py",
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Before MCTS: compute KL-divergence between network policy and uniform",
+          "After MCTS: compute KL-divergence between MCTS policy and uniform",
+          "Track ratio: MCTS_KL / Network_KL as 'improvement_factor'",
+          "Send via telemetry with each frame"
+        ],
+        "estimated_time": "40min"
+      },
+      {
+        "id": "2.2",
+        "category": "Learning Dynamics Dashboard",
+        "title": "Track average game length and win rate",
+        "description": "Monitor game length trends showing decisive play improvement",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Store game_length for each self-play game",
+          "Compute moving average over last 50 games",
+          "Track win_rate as P1 for model position strength",
+          "Add to metrics telemetry message"
+        ],
+        "estimated_time": "30min"
+      },
+      {
+        "id": "3.1",
+        "category": "Layer Activation Statistics",
+        "title": "Add activation hooks to ResNet",
+        "description": "Register forward hooks to capture activations from each layer",
+        "files_to_modify": [
+          "src/alpha_zero_light/model/network.py",
+          "src/alpha_zero_light/visualization/telemetry.py"
+        ],
+        "implementation": [
+          "Add register_forward_hook to start_block, each ResBlock, policy_head, value_head",
+          "Store activations in network.activation_stats dict",
+          "Compute mean, std, min, max, sparsity (% zeros) per layer",
+          "Create send_activation_stats() telemetry method"
+        ],
+        "estimated_time": "60min"
+      },
+      {
+        "id": "3.2",
+        "category": "Layer Activation Statistics",
+        "title": "Create activation histogram visualizer",
+        "description": "Show distribution of activations per layer type in C++ viewer",
+        "files_to_modify": [
+          "cpp_viewer/src/render_network.cpp",
+          "cpp_viewer/src/telemetry_client.h"
+        ],
+        "implementation": [
+          "Add activation_stats to NetSummaryMessage struct",
+          "Create draw_activation_histograms() method",
+          "Use ImPlot bar charts for each layer group",
+          "Color-code: blue=low, yellow=medium, red=high activation"
+        ],
+        "estimated_time": "50min"
+      },
+      {
+        "id": "3.3",
+        "category": "Layer Activation Statistics",
+        "title": "Add dead neuron detection",
+        "description": "Track and visualize neurons with consistently zero output",
+        "files_to_modify": [
+          "src/alpha_zero_light/model/network.py",
+          "cpp_viewer/src/render_network.cpp"
+        ],
+        "implementation": [
+          "In activation hook, count neurons with abs(output) < 1e-5",
+          "Maintain running average over 100 forward passes",
+          "Visualize as red dots on architecture diagram",
+          "Show percentage of dead neurons per layer"
+        ],
+        "estimated_time": "45min"
+      },
+      {
+        "id": "4.1",
+        "category": "Policy Confidence Visualization",
+        "title": "Track policy sharpness over training",
+        "description": "Measure how peaked the policy distribution becomes (confidence)",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Compute policy sharpness: max(policy) - mean(policy)",
+          "Alternative: 1/entropy as confidence metric",
+          "Store per-iteration average sharpness",
+          "Add to metrics telemetry"
+        ],
+        "estimated_time": "30min"
+      },
+      {
+        "id": "4.2",
+        "category": "Policy Confidence Visualization",
+        "title": "Create policy confidence gauge in viewer",
+        "description": "Real-time gauge showing current policy confidence",
+        "files_to_modify": [
+          "cpp_viewer/src/render_thinking.cpp"
+        ],
+        "implementation": [
+          "Add circular gauge widget (like speedometer)",
+          "Range: 0 (uniform) to 1 (deterministic)",
+          "Color gradient: red → yellow → green",
+          "Animate needle with smooth transitions"
+        ],
+        "estimated_time": "40min"
+      },
+      {
+        "id": "5.1",
+        "category": "Value Head Calibration",
+        "title": "Track value prediction errors over iterations",
+        "description": "Compare predicted values to actual game outcomes",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "After each game, compare final value_head predictions to outcome",
+          "Compute MSE separately for winning/losing/drawing positions",
+          "Track calibration: binned accuracy (e.g., if pred=0.8, win rate should be ~80%)",
+          "Send calibration_stats via telemetry"
+        ],
+        "estimated_time": "50min"
+      },
+      {
+        "id": "5.2",
+        "category": "Value Head Calibration",
+        "title": "Create calibration plot in viewer",
+        "description": "Scatter plot: predicted value vs actual outcome",
+        "files_to_modify": [
+          "cpp_viewer/src/render_metrics.cpp"
+        ],
+        "implementation": [
+          "Create scatter plot with ImPlot",
+          "X-axis: predicted value, Y-axis: actual outcome",
+          "Perfect calibration = diagonal line",
+          "Color-code by game phase (moves played)",
+          "Add running calibration curve"
+        ],
+        "estimated_time": "45min"
+      },
+      {
+        "id": "6.1",
+        "category": "Network Thinking Depth",
+        "title": "Compute residual contribution scores",
+        "description": "Measure information flow through skip connections",
+        "files_to_modify": [
+          "src/alpha_zero_light/model/network.py"
+        ],
+        "implementation": [
+          "In ResBlock forward, compute ||residual|| / (||conv_output|| + ||residual||)",
+          "Values near 0.5 = both paths used, near 0 = conv dominates, near 1 = skip dominates",
+          "Store per ResBlock per forward pass",
+          "Send average contribution scores via telemetry"
+        ],
+        "estimated_time": "40min"
+      },
+      {
+        "id": "6.2",
+        "category": "Network Thinking Depth",
+        "title": "Visualize residual flow in architecture",
+        "description": "Enhance architecture viz to show skip connection strength",
+        "files_to_modify": [
+          "cpp_viewer/src/render_network.cpp"
+        ],
+        "implementation": [
+          "Make Bézier skip connections thicker when contribution is high",
+          "Animate flow direction (particles moving along curve)",
+          "Color by contribution: blue=skip-dominant, red=conv-dominant",
+          "Add tooltip showing exact contribution percentages"
+        ],
+        "estimated_time": "50min"
+      },
+      {
+        "id": "7.1",
+        "category": "Training Metrics Timeline",
+        "title": "Add batch statistics tracking",
+        "description": "Monitor training data distribution over time",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Compute mean/std of board states per batch",
+          "Track position uniqueness (hash set of states seen)",
+          "Monitor class balance (wins/losses/ongoing)",
+          "Detect distribution shift between iterations",
+          "Send batch_stats via telemetry"
+        ],
+        "estimated_time": "45min"
+      },
+      {
+        "id": "7.2",
+        "category": "Training Metrics Timeline",
+        "title": "Create data quality dashboard",
+        "description": "Visualize training data health metrics",
+        "files_to_modify": [
+          "cpp_viewer/src/render_metrics.cpp"
+        ],
+        "implementation": [
+          "Plot unique positions seen over time (should grow)",
+          "Show class balance pie chart",
+          "Display data staleness (iterations since position added)",
+          "Add alert if distribution shift detected"
+        ],
+        "estimated_time": "50min"
+      },
+      {
+        "id": "8.1",
+        "category": "Move Quality Heatmap",
+        "title": "Track per-column prediction accuracy",
+        "description": "Measure which columns the network evaluates most accurately",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "For each move, record: column chosen, policy prob, actual outcome",
+          "Accumulate statistics per column across games",
+          "Compute: accuracy, confidence-accuracy correlation",
+          "Send column_quality_stats via telemetry"
+        ],
+        "estimated_time": "40min"
+      },
+      {
+        "id": "8.2",
+        "category": "Move Quality Heatmap",
+        "title": "Create 7x6 board heatmap overlay",
+        "description": "Color-coded board showing strategic understanding",
+        "files_to_modify": [
+          "cpp_viewer/src/render_board.cpp"
+        ],
+        "implementation": [
+          "Add heatmap mode toggle to board renderer",
+          "Color columns by prediction accuracy: green=good, red=poor",
+          "Show tooltip with detailed stats per column",
+          "Animate heatmap updates over iterations"
+        ],
+        "estimated_time": "45min"
+      },
+      {
+        "id": "9.1",
+        "category": "ELO Rating Progression",
+        "title": "Implement ELO rating system",
+        "description": "Track estimated skill level over training",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/evaluator.py",
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Add ELO rating calculation (start at 1500)",
+          "Update ELO after eval games vs random/heuristic/previous_self",
+          "Store ELO history per iteration",
+          "Estimate convergence using exponential fit",
+          "Send elo_rating via metrics telemetry"
+        ],
+        "estimated_time": "60min"
+      },
+      {
+        "id": "9.2",
+        "category": "ELO Rating Progression",
+        "title": "Create ELO progression chart",
+        "description": "Line plot showing skill improvement over time",
+        "files_to_modify": [
+          "cpp_viewer/src/render_metrics.cpp"
+        ],
+        "implementation": [
+          "Plot ELO vs iteration with ImPlot",
+          "Add reference lines: random (1000), heuristic (1300)",
+          "Show improvement rate (ELO/hour)",
+          "Predict final ELO with trend line",
+          "Color phases: learning (steep), plateau (flat)"
+        ],
+        "estimated_time": "40min"
+      },
+      {
+        "id": "10.1",
+        "category": "Comparative Snapshots",
+        "title": "Save model snapshots at key iterations",
+        "description": "Store model checkpoints for later comparison",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py"
+        ],
+        "implementation": [
+          "Auto-save snapshots at: iter 1, 10, 50, 100, 200",
+          "Store with metadata: iteration, loss, eval_winrate",
+          "Create snapshot loader for comparison mode",
+          "Keep only N most recent snapshots to save space"
+        ],
+        "estimated_time": "30min"
+      },
+      {
+        "id": "10.2",
+        "category": "Comparative Snapshots",
+        "title": "Create side-by-side comparison view",
+        "description": "Visual diff showing how network evolved",
+        "files_to_modify": [
+          "cpp_viewer/src/render_network.cpp",
+          "cpp_viewer/src/main.cpp"
+        ],
+        "implementation": [
+          "Add snapshot comparison mode (toggle with 'C' key)",
+          "Load two snapshots: baseline (iter 1) + current",
+          "Show split-screen policy/value outputs for same board",
+          "Highlight differences with colored overlays",
+          "Display improvement metrics"
+        ],
+        "estimated_time": "70min"
+      },
+      {
+        "id": "1.4",
+        "category": "Weight Evolution Visualization",
+        "title": "Track weight magnitude per layer",
+        "description": "Monitor weight changes to detect layer freezing/learning",
+        "files_to_modify": [
+          "src/alpha_zero_light/training/trainer.py",
+          "src/alpha_zero_light/visualization/telemetry.py"
+        ],
+        "implementation": [
+          "After each training iteration, compute ||W|| per layer",
+          "Track weight change rate: ||W_new - W_old|| / ||W_old||",
+          "Group by: start_block, resblocks, policy_head, value_head",
+          "Send weight_stats via send_net_summary()",
+          "Store history for temporal analysis"
+        ],
+        "estimated_time": "50min"
+      },
+      {
+        "id": "1.5",
+        "category": "Weight Evolution Visualization",
+        "title": "Create weight magnitude heatmap",
+        "description": "Visual timeline of weight evolution per layer",
+        "files_to_modify": [
+          "cpp_viewer/src/render_network.cpp"
+        ],
+        "implementation": [
+          "Create 2D heatmap: Y=layer index, X=iteration",
+          "Color intensity = weight magnitude or change rate",
+          "Add dropdown to toggle: magnitude/change_rate/gradient",
+          "Show which layers are actively learning vs frozen",
+          "Animate recent updates with glow effect"
+        ],
+        "estimated_time": "60min"
+      }
+    ],
+    "technical_requirements": {
+      "python_dependencies": ["numpy", "scipy (for curve fitting)"],
+      "cpp_dependencies": ["ImPlot (already included)", "ring buffer for time series"],
+      "telemetry_extensions": [
+        "Expand FrameMessage with: policy_entropy, mcts_improvement, activation_stats",
+        "Expand MetricsMessage with: gradient_norms, batch_stats, elo_rating, column_quality",
+        "Add new message type: ActivationMessage for layer-wise stats"
+      ],
+      "performance_considerations": [
+        "Activation hooks add ~5% overhead - make optional",
+        "Ring buffers should store last 1000 points max",
+        "Downsample time series for long training runs",
+        "Cache histogram computations (update every N frames)"
+      ]
+    },
+    "testing_plan": {
+      "unit_tests": [
+        "Test entropy calculation edge cases (uniform, deterministic)",
+        "Verify gradient norm computation matches PyTorch",
+        "Test activation statistics with known inputs"
+      ],
+      "integration_tests": [
+        "Run 10 iteration training with all telemetry enabled",
+        "Verify no memory leaks in C++ viewer",
+        "Test viewer performance with 1000+ data points"
+      ],
+      "visual_tests": [
+        "Validate charts show expected trends (loss decreasing)",
+        "Verify colors/legends/tooltips render correctly",
+        "Test window resizing and multi-monitor setups"
+      ]
+    }
+  }
+}
