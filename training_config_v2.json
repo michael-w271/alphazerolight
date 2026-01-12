@@ -1,0 +1,161 @@
+{
+  "training_session": {
+    "name": "connect4_training_v2",
+    "description": "Fresh Connect4 AlphaZero training run from scratch to evaluate improvements",
+    "start_date": "2026-01-12",
+    "target_iterations": 150
+  },
+  
+  "hardware": {
+    "device": "cuda",
+    "gpu_model": "NVIDIA RTX 5080",
+    "expected_duration_hours": 30
+  },
+  
+  "model_architecture": {
+    "type": "ResNet",
+    "num_res_blocks": 10,
+    "num_hidden": 128,
+    "total_parameters": "~1.2M"
+  },
+  
+  "training_hyperparameters": {
+    "num_iterations": 150,
+    "num_self_play_iterations": 150,
+    "num_epochs": 90,
+    "batch_size": 512,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "value_loss_weight": 1.0
+  },
+  
+  "mcts_configuration": {
+    "C": 2.0,
+    "num_searches": 100,
+    "dirichlet_alpha": 0.3,
+    "dirichlet_epsilon": 0.25,
+    "mcts_batch_size": 1
+  },
+  
+  "temperature_schedule": [
+    {
+      "until_iteration": 52,
+      "temperature": 1.25,
+      "note": "High exploration (35% of training)"
+    },
+    {
+      "until_iteration": 120,
+      "temperature": 1.0,
+      "note": "Balanced exploration (45% of training)"
+    },
+    {
+      "until_iteration": 150,
+      "temperature": 0.75,
+      "note": "Lower exploration, more deterministic (20% of training)"
+    }
+  ],
+  
+  "opponent_mix": {
+    "bootstrap_phase": {
+      "iterations": "0-9",
+      "self_play": 0.92,
+      "random": 0.08,
+      "note": "Learn basic valid moves and board structure"
+    },
+    "main_phase": {
+      "iterations": "10-149",
+      "self_play": 0.985,
+      "aggressive": 0.01,
+      "strong": 0.005,
+      "note": "Pure self-play dominance with minimal adversarial diversity"
+    }
+  },
+  
+  "checkpoint_configuration": {
+    "checkpoint_dir": "/mnt/ssd2pro/alpha-zero-checkpoints/connect4_v2",
+    "save_frequency": 1,
+    "keep_all_checkpoints": true
+  },
+  
+  "command_to_run": {
+    "script": "scripts/train_connect4.py",
+    "recommended_command": "cd /mnt/ssd2pro/alpha-zero-light && /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py",
+    "alternative_tmux": "tmux new -s connect4_training 'cd /mnt/ssd2pro/alpha-zero-light && /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py'"
+  },
+  
+  "monitoring": {
+    "metrics_saved_to": [
+      "checkpoints/connect4_v2/training_history.json",
+      "logs/connect4_v2/training.log"
+    ],
+    "key_metrics": [
+      "total_loss",
+      "policy_loss",
+      "value_loss",
+      "eval_win_rate"
+    ],
+    "evaluation_frequency": 10
+  },
+  
+  "expected_milestones": {
+    "iteration_20": "Basic tactics (block threats, connect pieces)",
+    "iteration_50": "Opening theory development",
+    "iteration_80": "Middle game patterns",
+    "iteration_120": "Mature tactical play",
+    "iteration_150": "Peak performance expected"
+  },
+  
+  "comparison_plan": {
+    "after_training": "Run tournament against model_120.pt (current champion)",
+    "evaluation_script": "model_tournament.py",
+    "recommended_models_to_test": [
+      "model_50.pt (from new training)",
+      "model_100.pt (from new training)",
+      "model_150.pt (from new training)",
+      "model_120.pt (current champion)"
+    ]
+  },
+  
+  "notes": {
+    "critical_fixes_already_applied": [
+      "Player perspective encoding (commit 3eda357)",
+      "UCB Q-term sign correction (commit 1b728e3)",
+      "Duplicate sample bug fix (commit 1b728e3)",
+      "MCTS batch size = 1 for tactical games"
+    ],
+    "differences_from_previous_run": [
+      "Reduced from 350 to 150 iterations for faster evaluation",
+      "Same hyperparameters as model_120 champion",
+      "Fresh training from scratch to verify reproducibility"
+    ],
+    "estimated_training_time": "~12-15 minutes per iteration = ~30-40 hours total"
+  },
+  
+  "pre_training_checklist": [
+    "✓ Ensure CUDA is available",
+    "✓ Create new checkpoint directory: /mnt/ssd2pro/alpha-zero-checkpoints/connect4_v2",
+    "✓ Verify disk space (need ~3GB for 150 models)",
+    "✓ Consider using tmux/screen for persistent session",
+    "✓ Monitor GPU temperature and utilization"
+  ],
+  
+  "quick_start_commands": [
+    "# Create checkpoint directory",
+    "mkdir -p /mnt/ssd2pro/alpha-zero-checkpoints/connect4_v2",
+    "",
+    "# Option 1: Direct run (blocks terminal)",
+    "cd /mnt/ssd2pro/alpha-zero-light",
+    "/mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py",
+    "",
+    "# Option 2: tmux session (recommended - can detach)",
+    "tmux new -s connect4_v2",
+    "cd /mnt/ssd2pro/alpha-zero-light",
+    "/mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py",
+    "# Press Ctrl+B then D to detach",
+    "# Reattach with: tmux attach -t connect4_v2",
+    "",
+    "# Option 3: Background with nohup",
+    "cd /mnt/ssd2pro/alpha-zero-light",
+    "nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py > training_v2.log 2>&1 &"
+  ]
+}

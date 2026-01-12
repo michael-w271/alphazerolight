@@ -1,0 +1,25 @@
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Loading Connect4 model...
+✅ Model loaded successfully on cuda
+
+============================================================
+🚀 Connect4 API Server Starting
+============================================================
+API Endpoints:
+  GET  /api/health  - Health check
+  POST /api/predict - Get AI prediction
+============================================================
+
+ * Serving Flask app 'server'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.2.142:5000
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [12/Jan/2026 22:03:04] "GET /api/health HTTP/1.1" 200 -

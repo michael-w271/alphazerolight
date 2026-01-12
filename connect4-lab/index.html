@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Four - AI Lab</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -81,8 +83,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         /* Main Layout */
@@ -174,6 +183,7 @@
                 transform: translateY(-400px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
@@ -195,8 +205,16 @@
         }
 
         @keyframes winPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); box-shadow: 0 0 25px currentColor; }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 25px currentColor;
+            }
         }
 
         /* Controls */
@@ -340,8 +358,13 @@
             font-weight: 600;
         }
 
-        .move-player.p1 { color: var(--player-red); }
-        .move-player.p2 { color: var(--player-yellow); }
+        .move-player.p1 {
+            color: var(--player-red);
+        }
+
+        .move-player.p2 {
+            color: var(--player-yellow);
+        }
 
         /* Responsive */
         @media (max-width: 1200px) {
@@ -352,9 +375,18 @@
                     "left"
                     "right";
             }
-            #left-panel { grid-area: left; }
-            #center-panel { grid-area: center; }
-            #right-panel { grid-area: right; }
+
+            #left-panel {
+                grid-area: left;
+            }
+
+            #center-panel {
+                grid-area: center;
+            }
+
+            #right-panel {
+                grid-area: right;
+            }
         }
 
         @media (max-width: 768px) {
@@ -363,14 +395,17 @@
                 gap: 6px;
                 padding: 15px;
             }
+
             .cell {
                 width: 50px;
                 height: 50px;
             }
+
             .piece {
                 width: 42px;
                 height: 42px;
             }
+
             .app-container {
                 padding: 1rem;
             }
@@ -387,10 +422,49 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Player Names */
+        .player-names {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+
+        .player-input {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .player-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input[type="text"] {
+            padding: 0.6rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
         }
     </style>
 </head>
+
 <body>
     <header>
         <div class="header-content">
@@ -412,6 +486,17 @@
                 <button onclick="toggleAI()">
                     <span id="ai-toggle-text">🤖 AI: ON</span>
                 </button>
+            </div>
+
+            <div class="player-names">
+                <div class="player-input">
+                    <label class="player-label" style="color: var(--player-red);">🔴 Player 1 Name</label>
+                    <input type="text" id="player1-name" value="Player 1" maxlength="15">
+                </div>
+                <div class="player-input">
+                    <label class="player-label" style="color: var(--player-yellow);">🟡 Player 2 Name</label>
+                    <input type="text" id="player2-name" value="AI" maxlength="15">
+                </div>
             </div>
 
             <h2 class="panel-title" style="margin-top: 2rem;">📜 Move History</h2>
@@ -439,12 +524,22 @@
     <script>
         // Game State
         let board = Array(6).fill(null).map(() => Array(7).fill(0));
-        let currentPlayer = 1; // 1 = Human (Red), 2 = AI (Yellow)
+        let currentPlayer = 1; // 1 = Player 1 (Red), 2 = Player 2 (Yellow)
         let gameOver = false;
         let aiEnabled = true;
         let moves = [];
         let lastPrediction = null;
         const API_URL = 'http://localhost:5000/api';
+
+        // Helper functions for player names
+        function getPlayerName(player) {
+            if (player === 1) {
+                return document.getElementById('player1-name').value || 'Player 1';
+            } else {
+                const player2Input = document.getElementById('player2-name');
+                return aiEnabled ? 'AI' : (player2Input.value || 'Player 2');
+            }
+        }
 
         // Initialize
         function init() {
@@ -459,7 +554,7 @@
             try {
                 const response = await fetch(`${API_URL}/health`);
                 const data = await response.json();
-                document.getElementById('api-status').textContent = 
+                document.getElementById('api-status').textContent =
                     data.model_loaded ? 'API Connected' : 'Model Not Loaded';
             } catch (error) {
                 document.getElementById('api-status').textContent = 'API Offline';
@@ -484,16 +579,16 @@
         function checkWin(row, col) {
             const player = board[row][col];
             const directions = [
-                [[0,1], [0,-1]],   // Horizontal
-                [[1,0], [-1,0]],   // Vertical
-                [[1,1], [-1,-1]],  // Diagonal \
-                [[1,-1], [-1,1]]   // Diagonal /
+                [[0, 1], [0, -1]],   // Horizontal
+                [[1, 0], [-1, 0]],   // Vertical
+                [[1, 1], [-1, -1]],  // Diagonal \
+                [[1, -1], [-1, 1]]   // Diagonal /
             ];
 
             for (let [dir1, dir2] of directions) {
                 let count = 1;
                 let winCells = [[row, col]];
-                
+
                 // Check both directions
                 for (let [dr, dc] of [dir1, dir2]) {
                     let r = row + dr, c = col + dc;
@@ -504,7 +599,7 @@
                         c += dc;
                     }
                 }
-                
+
                 if (count >= 4) return winCells;
             }
             return null;
@@ -524,33 +619,41 @@
         // Game Actions
         async function dropPiece(col) {
             if (gameOver) return;
-            
+
             const row = getLowestRow(col);
             if (row === -1) return; // Column full
-            
+
             board[row][col] = currentPlayer;
             moves.push({ player: currentPlayer, col, row, time: Date.now() });
             renderBoard();
             renderMoveLog();
-            
+
             const winCells = checkWin(row, col);
             if (winCells) {
                 gameOver = true;
                 highlightWin(winCells);
-                updateStatus(`${currentPlayer === 1 ? 'You' : 'AI'} Win!`);
+                updateStatus(`${getPlayerName(currentPlayer)} Wins! 🎉`);
                 return;
             }
-            
+
             if (isBoardFull()) {
                 gameOver = true;
                 updateStatus('Draw!');
                 return;
             }
-            
+
             // Switch player
             currentPlayer = currentPlayer === 1 ? 2 : 1;
-            updateStatus(currentPlayer === 1 ? 'Your Turn (Red)' : 'AI Thinking...');
-            
+
+            // Update status
+            if (aiEnabled && currentPlayer === 2) {
+                updateStatus('AI Thinking...');
+            } else {
+                const playerName = getPlayerName(currentPlayer);
+                const color = currentPlayer === 1 ? 'Red' : 'Yellow';
+                updateStatus(`${playerName}'s Turn (${color})`);
+            }
+
             // AI turn
             if (currentPlayer === 2 && aiEnabled) {
                 setTimeout(async () => {
@@ -575,32 +678,32 @@
             renderMoveLog();
             renderHeatmap(null);
             renderRankings(null);
-            updateStatus('Your Turn (Red)');
+            updateStatus(`${getPlayerName(1)}'s Turn (Red)`);
         }
 
         function undoMove() {
             if (moves.length === 0) return;
-            
+
             // Undo last move
             const lastMove = moves.pop();
             board[lastMove.row][lastMove.col] = 0;
-            
+
             // If AI was last, undo human move too
             if (lastMove.player === 2 && moves.length > 0) {
                 const prevMove = moves.pop();
                 board[prevMove.row][prevMove.col] = 0;
             }
-            
+
             currentPlayer = 1;
             gameOver = false;
             renderBoard();
             renderMoveLog();
-            updateStatus('Your Turn (Red)');
+            updateStatus(`${getPlayerName(1)}'s Turn (Red)`);
         }
 
         function toggleAI() {
             aiEnabled = !aiEnabled;
-            document.getElementById('ai-toggle-text').textContent = 
+            document.getElementById('ai-toggle-text').textContent =
                 aiEnabled ? '🤖 AI: ON' : '🤖 AI: OFF';
         }
 
@@ -608,20 +711,21 @@
         function renderBoard() {
             const boardEl = document.getElementById('board');
             boardEl.innerHTML = '';
-            
+
             for (let row = 0; row < 6; row++) {
                 for (let col = 0; col < 7; col++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.onclick = () => currentPlayer === 1 && !gameOver && dropPiece(col);
-                    
+                    // Allow clicks for player 1, or player 2 if AI is off
+                    cell.onclick = () => !gameOver && (currentPlayer === 1 || (currentPlayer === 2 && !aiEnabled)) && dropPiece(col);
+
                     if (board[row][col] !== 0) {
                         cell.classList.add('filled');
                         const piece = document.createElement('div');
                         piece.className = `piece player${board[row][col]}`;
                         cell.appendChild(piece);
                     }
-                    
+
                     boardEl.appendChild(cell);
                 }
             }
@@ -639,30 +743,30 @@
         function renderHeatmap(prediction) {
             const heatmapEl = document.getElementById('heatmap');
             heatmapEl.innerHTML = '';
-            
+
             for (let col = 0; col < 7; col++) {
                 const cell = document.createElement('div');
                 cell.className = 'heatmap-cell';
-                
+
                 if (prediction) {
                     const value = prediction.q_values[col];
                     const isLegal = prediction.legal_mask[col];
                     const isBest = col === prediction.q_values.indexOf(Math.max(...prediction.q_values.filter((v, i) => prediction.legal_mask[i])));
                     const isChosen = col === prediction.chosen_column;
-                    
+
                     if (!isLegal) cell.classList.add('illegal');
                     if (isBest && isLegal) cell.classList.add('best');
                     if (isChosen) cell.classList.add('chosen');
-                    
+
                     cell.innerHTML = `
                         <div class="heatmap-label">Col ${col}</div>
                         <div class="heatmap-value">${isLegal ? value.toFixed(3) : '---'}</div>
                     `;
-                    
+
                     // Color based on value
                     if (isLegal) {
-                        const normalized = (value - Math.min(...prediction.q_values)) / 
-                                         (Math.max(...prediction.q_values) - Math.min(...prediction.q_values) + 0.001);
+                        const normalized = (value - Math.min(...prediction.q_values)) /
+                            (Math.max(...prediction.q_values) - Math.min(...prediction.q_values) + 0.001);
                         const hue = normalized * 120; // 0 (red) to 120 (green)
                         cell.style.background = `linear-gradient(135deg, var(--card), hsl(${hue}, 70%, 30%))`;
                     }
@@ -672,7 +776,7 @@
                         <div class="heatmap-value">---</div>
                     `;
                 }
-                
+
                 heatmapEl.appendChild(cell);
             }
         }
@@ -680,24 +784,24 @@
         function renderRankings(prediction) {
             const rankingsEl = document.getElementById('rankings');
             rankingsEl.innerHTML = '';
-            
+
             if (!prediction) {
                 rankingsEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Play a move to see AI analysis</p>';
                 return;
             }
-            
+
             // Get top 5 legal moves
             const rankedMoves = prediction.q_values
                 .map((value, col) => ({ col, value, legal: prediction.legal_mask[col] }))
                 .filter(m => m.legal)
                 .sort((a, b) => b.value - a.value)
                 .slice(0, 5);
-            
+
             rankedMoves.forEach((move, index) => {
                 const item = document.createElement('div');
                 item.className = 'ranking-item';
                 if (index === 0) item.classList.add('best');
-                
+
                 item.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="rank-number">${index + 1}</span>
@@ -705,7 +809,7 @@
                     </div>
                     <span class="rank-value">${move.value.toFixed(4)}</span>
                 `;
-                
+
                 rankingsEl.appendChild(item);
             });
         }
@@ -713,12 +817,15 @@
         function renderMoveLog() {
             const logEl = document.getElementById('move-log');
             logEl.innerHTML = '';
-            
+
             moves.slice().reverse().forEach((move, index) => {
                 const item = document.createElement('div');
                 item.className = 'move-item';
+                const playerName = move.player === 1 ?
+                    (document.getElementById('player1-name').value || 'Player 1') :
+                    (aiEnabled ? 'AI' : (document.getElementById('player2-name').value || 'Player 2'));
                 item.innerHTML = `
-                    <span class="move-player p${move.player}">${move.player === 1 ? 'You' : 'AI'}</span>
+                    <span class="move-player p${move.player}">${playerName}</span>
                     <span>Col ${move.col}</span>
                 `;
                 logEl.appendChild(item);
@@ -733,4 +840,5 @@
         init();
     </script>
 </body>
+
 </html>

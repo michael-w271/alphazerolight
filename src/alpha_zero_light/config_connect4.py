@@ -5,21 +5,35 @@ Configuration for Connect Four (4-in-a-row) AlphaZero training.
 from dataclasses import dataclass
 
 
-# Training Configuration
+# Training Configuration - PROGRESSIVE CURRICULUM
 TRAINING_CONFIG = {
     'num_iterations': 350,              # Extended long run
-    'num_self_play_iterations': 150,    # Games per iteration (increased from 100)
-    'num_parallel_workers': 2,          # CPU cores per batch (conservative for stability)
+    'num_self_play_iterations': 150,    # Games per iteration
+    'num_parallel_workers': 6,          # INCREASED: More parallel games for speed
     'games_per_batch': 25,              # Games per parallel batch
-    'num_epochs': 90,                   # Epochs per iteration (increased from 50)
-    'batch_size': 512,                  # Batch size for neural network training
+    'num_epochs': 90,                   # Epochs per iteration
+    'batch_size': 1024,                 # DOUBLED: Better GPU utilization
     'temperature_schedule': [           # Exploration schedule
         {'until_iteration': 80, 'temperature': 1.25},
         {'until_iteration': 180, 'temperature': 1.0},
         {'until_iteration': 350, 'temperature': 0.75}
     ],
+    # PROGRESSIVE MCTS SCHEDULE - Smart curriculum!
+    'mcts_schedule': [
+        {'until_iteration': 25, 'num_searches': 50},   # Weak model: quick searches
+        {'until_iteration': 50, 'num_searches': 100},  # Learning: moderate depth
+        {'until_iteration': 75, 'num_searches': 200},  # Improving: deeper search
+        {'until_iteration': 100, 'num_searches': 300}, # Strong: tournament depth
+        {'until_iteration': 350, 'num_searches': 400}, # Maximum: unbeatable
+    ],
+    # PROGRESSIVE EPOCHS SCHEDULE - More training as data quality improves
+    'epochs_schedule': [
+        {'until_iteration': 50, 'num_epochs': 60},     # Fast early learning
+        {'until_iteration': 150, 'num_epochs': 90},    # Standard training
+        {'until_iteration': 350, 'num_epochs': 120},   # Deep training for high-quality data
+    ],
     'value_loss_weight': 1.0,           # Balanced value loss
-    'random_opponent_iterations': 10,   # Bootstrap phase: 0-9 (updated to match OPPONENT_MIX)
+    'random_opponent_iterations': 10,   # Bootstrap phase: 0-9
     'eval_frequency': 10,               
     'num_eval_games': 30,               
     'dirichlet_epsilon': 0.25,          
@@ -61,18 +75,22 @@ TRAINING_CONFIG = {
 # MCTS Configuration
 MCTS_CONFIG = {
     'C': 2.0,                           
-    'num_searches': 100,                # Increased to 100 for better play quality
+    'num_searches': 400,                # MAXIMUM: 400 searches for tournament-level play
     'dirichlet_alpha': 0.3,             # Exploration noise (lower = more concentrated)
     'dirichlet_epsilon': 0.25,          # Fraction of noise to add to root
-    'mcts_batch_size': 1,
+    'mcts_batch_size': 1,               # Keep at 1 for tactical depth
 }
 
-# Model Configuration
+# Model Configuration - MAXIMUM STRENGTH
 MODEL_CONFIG = {
-    'num_res_blocks': 10,               # 10 residual blocks
-    'num_hidden': 128,                  # 128 hidden units
-    'learning_rate': 0.001,             # Standard learning rate
-    'learning_rate_schedule': [],       # No LR schedule
+    'num_res_blocks': 20,               # DOUBLED: 20 residual blocks (much larger model)
+    'num_hidden': 256,                  # DOUBLED: 256 hidden units (~4x parameters)
+    'learning_rate': 0.001,             # Starting learning rate
+    'learning_rate_schedule': [         # LR decay for better convergence
+        {'until_iteration': 100, 'lr': 0.001},
+        {'until_iteration': 200, 'lr': 0.0005},
+        {'until_iteration': 300, 'lr': 0.0001},
+    ],
     'weight_decay': 0.0001,             
 }
 
@@ -93,12 +111,12 @@ OPPONENT_MIX = {
     'main': {
         'iterations_inclusive': [10, 349],
         'probabilities': {
-            'self_play': 0.985,  # 98.5% self-play
+            'self_play': 0.90,   # REDUCED: 90% self-play (more opponent diversity!)
             'random': 0.0,
             'heuristic': 0.0,
-            'aggressive': 0.01,  # Tiny adversarial diversity
-            'strong': 0.005,     # Minimal strong opponent
-            'tactical': 0.0
+            'aggressive': 0.05,  # INCREASED: 5% adversarial play
+            'strong': 0.03,      # INCREASED: 3% strong opponent (2-ply lookahead)
+            'tactical': 0.02     # ADDED: 2% tactical puzzles opponent
         }
     }
 }

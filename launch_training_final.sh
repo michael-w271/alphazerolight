@@ -1,0 +1,40 @@
+#!/bin/bash
+# Final launcher with comprehensive monitors
+
+echo "🚀 Launching Connect4 Maximum Strength Training"
+echo "=============================================="
+echo ""
+
+# Kill existing
+pkill -f "train_connect4.py" 2>/dev/null
+sleep 1
+
+# Start training
+echo "Starting training..."
+nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py > training_log_v2.txt 2>&1 &
+echo "✅ Training started (PID: $!)"
+sleep 2
+
+# Launch comprehensive training monitor
+echo "Opening training monitor..."
+gnome-terminal --title="🎮 Training Monitor - Full Info" \
+    --geometry=140x45 \
+    --working-directory="$(pwd)" \
+    -- bash monitor_full.sh &
+
+sleep 1
+
+# Launch enhanced evaluation monitor  
+echo "Opening evaluation monitor..."
+gnome-terminal --title="🎯 Model Evaluation - Comprehensive" \
+    --geometry=130x50 \
+    --working-directory="$(pwd)" \
+    -- bash monitor_eval.sh &
+
+echo ""
+echo "✅ Monitoring launched!"
+echo ""
+echo "Windows:"
+echo "  1. 🎮 Training Monitor - Full details with clean progress"
+echo "  2. 🎯 Evaluation Monitor - Tactical tests every 10 iterations"
+echo ""

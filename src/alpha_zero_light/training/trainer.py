@@ -712,6 +712,38 @@ class AlphaZeroTrainer:
         
         return total_loss / num_batches, total_policy_loss / num_batches, total_value_loss / num_batches
             
+    def _get_progressive_mcts_searches(self, iteration):
+        """Get MCTS searches for current iteration based on progressive schedule"""
+        mcts_schedule = self.args.get('mcts_schedule', [])
+        
+        if not mcts_schedule:
+            # No schedule, use default
+            return self.args.get('num_searches', 100)
+        
+        # Find the right tier
+        for tier in mcts_schedule:
+            if iteration < tier['until_iteration']:
+                return tier['num_searches']
+        
+        # If past all tiers, use last tier's value
+        return mcts_schedule[-1]['num_searches']
+    
+    def _get_progressive_epochs(self, iteration):
+        """Get number of epochs for current iteration based on progressive schedule"""
+        epochs_schedule = self.args.get('epochs_schedule', [])
+        
+        if not epochs_schedule:
+            # No schedule, use default
+            return self.args.get('num_epochs', 90)
+        
+        # Find the right tier
+        for tier in epochs_schedule:
+            if iteration < tier['until_iteration']:
+                return tier['num_epochs']
+        
+        # If past all tiers, use last tier's value
+        return epochs_schedule[-1]['num_epochs']
+    
     def learn(self, checkpoint_dir='checkpoints'):
         """
         Main training loop with evaluation and metrics tracking
@@ -788,10 +820,18 @@ class AlphaZeroTrainer:
                 # Self-play with progress bar
                 self.model.eval()
                 
+                # Get progressive MCTS searches and epochs for this iteration
+                current_mcts_searches = self._get_progressive_mcts_searches(iteration)
+                current_epochs = self._get_progressive_epochs(iteration)
+                
+                # Update MCTS config temporarily for this iteration
+                old_mcts_searches = self.args.get('num_searches')
+                self.args['num_searches'] = current_mcts_searches
+                
                 print(f"   - {self.args['num_self_play_iterations']} games")
                 print(f"   - Model randomly plays as Player 1 or -1 (50/50)")
-                
-                print(f"   - MCTS searches: {self.args.get('num_searches', 50)}")
+                print(f"   - MCTS searches: {current_mcts_searches}")
+                print(f"   - Training epochs: {current_epochs}")
                 print(f"   - Temperature: {temperature:.2f}")
                 print(f"   - Phase: {phase}")
                 sys.stdout.flush()
@@ -860,11 +900,10 @@ class AlphaZeroTrainer:
                 epoch_policy_losses = []
                 epoch_value_losses = []
                 
-                print(f"🧠 Training neural network ({self.args['num_epochs']} epochs)...")
+                print(f"🧠 Training neural network ({current_epochs} epochs)...")
                 sys.stdout.flush()
                 
-                # Show epoch progress with tqdm
-                for epoch in tqdm(range(self.args['num_epochs']), desc="Training", ncols=80):
+                for epoch in tqdm(range(current_epochs), desc="Training", ncols=80):
                     loss, policy_loss, value_loss = self.train(memory)
                     epoch_losses.append(loss)
                     epoch_policy_losses.append(policy_loss)
