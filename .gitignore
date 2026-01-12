@@ -17,3 +17,7 @@ training_progress.json
 
 # Large model files
 *.pt
+logs/
+**/node_modules/
+dist/
+.DS_Store

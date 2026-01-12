@@ -31,7 +31,7 @@ We train an AlphaZero agent for Connect Four from scratch using self-play reinfo
 ## 2. Methodology
 
 ### 2.1 Architecture
-- **Neural Network**: ResNet-10 with 128 hidden units
+- **Neural Network**: ResNet-20 with 256 hidden units (~24M parameters)
 - **Input**: 3-channel 6×7 board (current player, opponent, player indicator)
 - **Output**: Dual heads (policy: 7-dim, value: scalar)
 
@@ -77,6 +77,12 @@ Overall = 0.70 × Tactical_Accuracy + 0.15 × Center_Pref + 0.15 × Position_Eva
 | ... | ... | ... | ... | ... |
 
 *To be filled during training evaluation*
+
+### 3.1.1 Early Tournament Results (Iter 15)
+A head-to-head match between **Model 1** (Infant, Random+MCTS) and **Model 15** (Toddler, Early Learner) revealed:
+- **Defense**: Matches result in Draws when Model 1 is Player 1 (MCTS defense holds).
+- **Offense**: Model 15 achieves **100% Win Rate** (5-0 in 5 games) when playing First.
+- **Conclusion**: Offensive capability (converting 1st move advantage) emerges by Iteration 15. Defensive equality persists due to MCTS strength.
 
 ### 3.2 Skill Development Timeline
 
@@ -145,7 +151,15 @@ Critical to success were fixes implemented Dec 15, 2025:
 | Training time | ~24h | ~30-40h |
 | Tactical accuracy | -- | -- |
 | Tournament win rate | 60% | TBD |
+| Tournament win rate | 60% | TBD |
 
+### 4.4 The "MCTS Illusion"
+Early models (e.g., Iteration 11) appear subjectively "strong" to human testers. Analysis reveals this is due to the 100-200 MCTS simulation depth, which provides superhuman tactical lookahead (blocking 1-move/2-move threats) even with a weak policy prior. The neural network's contribution becomes visible only in:
+1.  **Opening Theory**: Iteration 15 plays aggressive openings, Iteration 1 plays random valid moves.
+2.  **Strategic Planning**: Mid-game positioning improves, breaking the MCTS-defensive stalemate.
+
+### 4.5 Computational Footprint
+The upgrade to **ResNet-20 (24M params)** significantly increased GPU arithmetic intensity. The MCTS evaluation (batch size 1, 6 workers) consistently saturates the GPU compute units, verifying that the larger model is being fully utilized compared to the I/O-bound ResNet-10.
 ---
 
 ## 5. Conclusions
@@ -158,6 +172,7 @@ Critical to success were fixes implemented Dec 15, 2025:
 ### 5.2 Future Work
 - Scale to larger board sizes (7×7, 8×8)
 - Compare different MCTS search budgets
+- **Dynamic Curriculum Learning**: Implement adaptive schedules where MCTS search depth and training epochs increase automatically based on policy loss thresholds (e.g., increase depth when loss < 1.0) rather than fixed iteration counts.
 - Analyze opening book development
 - Transfer learning experiments
 

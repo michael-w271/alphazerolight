@@ -18,6 +18,7 @@ TRAINING_CONFIG = {
         {'until_iteration': 180, 'temperature': 1.0},
         {'until_iteration': 350, 'temperature': 0.75}
     ],
+
     # PROGRESSIVE MCTS SCHEDULE - Smart curriculum!
     'mcts_schedule': [
         {'until_iteration': 25, 'num_searches': 50},   # Weak model: quick searches

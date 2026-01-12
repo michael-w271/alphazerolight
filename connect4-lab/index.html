@@ -462,6 +462,75 @@
             border-color: var(--accent-primary);
             box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
         }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(24px);
+            background-color: white;
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .switch-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
     </style>
 </head>
 
@@ -479,6 +548,49 @@
     <div class="app-container">
         <!-- Left Panel: Controls & Move Log -->
         <div class="panel" id="left-panel">
+            <h2 class="panel-title">🤖 AI Model Settings</h2>
+            <div class="model-controls" style="margin-bottom: 2rem;">
+                <div class="control-group">
+                    <label class="switch-label">
+                        <span>Auto-Reload Latest</span>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-reload-toggle" checked onchange="toggleAutoReload()">
+                            <span class="slider round"></span>
+                        </label>
+                    </label>
+                </div>
+
+                <div class="control-group" id="model-select-group" style="margin-top: 1rem; opacity: 0.5;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted);">Select Model Version</label>
+                    <select id="model-select" onchange="selectModel()" disabled
+                        style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); color: var(--text-primary); border-radius: 6px;">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 1rem; font-size: 0.9rem;">
+                    <span style="color: var(--text-muted);">Active: </span>
+                    <span id="active-model-name"
+                        style="color: var(--accent-primary); font-weight: 600;">Loading...</span>
+                </div>
+
+                <div class="control-group"
+                    style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <label class="player-label" style="display: flex; justify-content: space-between;">
+                        <span>MCTS Thinking Depth</span>
+                        <span id="mcts-value" style="color: var(--accent-secondary); font-family: monospace;">200</span>
+                    </label>
+                    <input type="range" id="mcts-slider" min="50" max="800" step="50" value="200"
+                        style="width: 100%; margin-top: 0.5rem;"
+                        oninput="document.getElementById('mcts-value').textContent = this.value">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+                        <span>Fast (50)</span>
+                        <span>Deep (800)</span>
+                    </div>
+                </div>
+            </div>
+
             <h2 class="panel-title">⚙️ Game Controls</h2>
             <div class="controls">
                 <button class="primary" onclick="newGame()">🔄 New Game</button>
@@ -546,7 +658,109 @@
             renderBoard();
             renderHeatmap(null);
             renderRankings(null);
+            renderRankings(null);
             checkAPIHealth();
+            fetchModels();
+            // Refresh models periodically
+            setInterval(fetchModels, 5000);
+        }
+
+        // Model Management
+        async function fetchModels() {
+            try {
+                const response = await fetch(`${API_URL}/models`);
+                const data = await response.json();
+
+                // Update active model display
+                const activeName = data.current_model === 'None' ? 'Loading...' :
+                    `${data.current_model} (Iter ${data.current_iteration})`;
+                document.getElementById('active-model-name').textContent = activeName;
+
+                // Update Toggle
+                const toggle = document.getElementById('auto-reload-toggle');
+                // Only update toggle if it differs from server state (to avoid fighting user input)
+                // But we generally respect the server's state on first load
+                // toggle.checked = data.auto_reload; 
+
+                // Populate Dropdown
+                const select = document.getElementById('model-select');
+                const scrollPos = select.scrollTop;
+                const currentVal = select.value;
+
+                select.innerHTML = '';
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.filename;
+                    option.text = `Iter ${model.iteration} (${model.filename})`;
+                    if (model.filename === data.current_model) {
+                        // option.selected = true; // Don't force select, let user see what's active via label
+                    }
+                    select.appendChild(option);
+                });
+
+                if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+                    select.value = currentVal; // Restore selection
+                }
+                select.scrollTop = scrollPos;
+
+                // Update UI State
+                updateModelControls(data.auto_reload);
+
+            } catch (error) {
+                console.error('Error fetching models:', error);
+            }
+        }
+
+        async function toggleAutoReload() {
+            const isAuto = document.getElementById('auto-reload-toggle').checked;
+            updateModelControls(isAuto);
+
+            try {
+                await fetch(`${API_URL}/model`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: isAuto ? 'auto' : 'manual', filename: document.getElementById('model-select').value })
+                });
+                fetchModels(); // Refresh immediately
+            } catch (error) {
+                console.error('Error toggling auto-reload:', error);
+            }
+        }
+
+        async function selectModel() {
+            const filename = document.getElementById('model-select').value;
+            if (!filename) return;
+
+            // Force manual mode when selecting
+            document.getElementById('auto-reload-toggle').checked = false;
+            updateModelControls(false);
+
+            try {
+                await fetch(`${API_URL}/model`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'manual', filename: filename })
+                });
+                fetchModels();
+            } catch (error) {
+                console.error('Error selecting model:', error);
+            }
+        }
+
+        function updateModelControls(isAuto) {
+            const group = document.getElementById('model-select-group');
+            const select = document.getElementById('model-select');
+            const toggle = document.getElementById('auto-reload-toggle');
+
+            toggle.checked = isAuto;
+
+            if (isAuto) {
+                group.style.opacity = '0.5';
+                select.disabled = true;
+            } else {
+                group.style.opacity = '1';
+                select.disabled = false;
+            }
         }
 
         // API Functions
@@ -563,10 +777,15 @@
 
         async function getAIPrediction() {
             try {
+                const mctsSearches = document.getElementById('mcts-slider').value;
                 const response = await fetch(`${API_URL}/predict`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ board, player: 2 })
+                    body: JSON.stringify({
+                        board,
+                        player: 2,
+                        mcts_searches: parseInt(mctsSearches)
+                    })
                 });
                 return await response.json();
             } catch (error) {

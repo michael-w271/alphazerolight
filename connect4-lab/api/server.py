@@ -29,35 +29,205 @@ model = None
 mcts = None
 device = None
 
-def load_model():
-    """Load the Connect4 model on startup"""
-    global game, model, mcts, device
+import threading
+import time
+import os
+import re
+
+# Watcher config
+CHECKPOINT_DIR = Path("/mnt/ssd2pro/alpha-zero-light/checkpoints/connect4")
+CHECK_INTERVAL_SECONDS = 15
+current_iteration = 0
+current_model_name = "None"
+last_loaded_time = 0
+auto_reload_enabled = True  # Default to auto
+target_model_file = None  # If manually selected
+
+def find_latest_model():
+    """Find the model with the highest iteration number"""
+    if not CHECKPOINT_DIR.exists():
+        return None, 0
     
-    print("Loading Connect4 model...")
-    checkpoint_path = Path("/mnt/ssd2pro/alpha-zero-checkpoints/connect4/model_120.pt")
+    max_iter = -1
+    best_model = None
     
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Model not found at {checkpoint_path}")
+    # Scan for model_X.pt files
+    pattern = re.compile(r"model_(\d+).pt")
+    try:
+        for f in os.listdir(CHECKPOINT_DIR):
+            match = pattern.match(f)
+            if match:
+                iteration = int(match.group(1))
+                if iteration > max_iter:
+                    max_iter = iteration
+                    best_model = CHECKPOINT_DIR / f
+    except Exception as e:
+        print(f"Scanning error: {e}")
+                
+    return best_model, max_iter
+
+def get_available_models():
+    """Get list of all available models"""
+    models = []
+    if not CHECKPOINT_DIR.exists():
+        return models
+        
+    pattern = re.compile(r"model_(\d+).pt")
+    try:
+        for f in os.listdir(CHECKPOINT_DIR):
+            match = pattern.match(f)
+            if match:
+                iteration = int(match.group(1))
+                models.append({
+                    'filename': f,
+                    'iteration': iteration,
+                    'path': str(CHECKPOINT_DIR / f)
+                })
+    except Exception as e:
+        print(f"Scanning error: {e}")
     
-    game = ConnectFour()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Sort by iteration (descending)
+    models.sort(key=lambda x: x['iteration'], reverse=True)
+    return models
+
+def load_model(specific_filename=None):
+    """Load the Connect4 model (specific filename or latest auto-detected)"""
+    global game, model, mcts, device, current_iteration, current_model_name, last_loaded_time
     
-    model = ResNet(game, num_res_blocks=10, num_hidden=128).to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.eval()
+    checkpoint_path = None
+    iter_num = 0
     
-    # Create MCTS with moderate search count for responsive UI
-    args = {
-        'C': 2.0,
-        'num_searches': 100,  # Balance between speed and quality
-        'dirichlet_epsilon': 0.0,  # No exploration in play mode
-        'dirichlet_alpha': 0.3,
-        'mcts_batch_size': 1,
-    }
-    mcts = MCTS(game, args, model)
+    if specific_filename:
+        checkpoint_path = CHECKPOINT_DIR / specific_filename
+        match = re.search(r"model_(\d+).pt", specific_filename)
+        if match:
+            iter_num = int(match.group(1))
+    else:
+        checkpoint_path, iter_num = find_latest_model()
     
-    print(f"✅ Model loaded successfully on {device}")
-    return True
+    if not checkpoint_path or not checkpoint_path.exists():
+        print(f"⚠️ Model not found: {checkpoint_path}")
+        return False
+        
+    print(f"🔄 Loading Connect4 model: {checkpoint_path.name} (Iteration {iter_num})...")
+    
+    try:
+        if game is None:
+            game = ConnectFour()
+        
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Load model structure (ResNet-20, 256 hidden for new training)
+        # Fallback to smaller model if loading fails (backward compatibility)
+        try:
+            # TRY NEW MAX CONFIG FIRST
+            temp_model = ResNet(game, num_res_blocks=20, num_hidden=256).to(device)
+            state_dict = torch.load(checkpoint_path, map_location=device)
+            temp_model.load_state_dict(state_dict)
+            model = temp_model
+        except Exception as e:
+            print(f"⚠️ Failed to load as Max Config (ResNet-20): {e}")
+            print("Trying legacy config (ResNet-10)...")
+            temp_model = ResNet(game, num_res_blocks=10, num_hidden=128).to(device)
+            state_dict = torch.load(checkpoint_path, map_location=device)
+            temp_model.load_state_dict(state_dict)
+            model = temp_model
+            
+        model.eval()
+        
+        # Dynamic MCTS searches based on iteration to reflect true strength curve
+        # Iter 0-25: 50 searches (Fast/Weak)
+        # Iter 25-50: 100 searches
+        # Iter 50-75: 200 searches
+        # Iter 100+: 400 searches (or more for inference)
+        
+        if iter_num < 25:
+            inference_searches = 50
+        elif iter_num < 50:
+            inference_searches = 100
+        elif iter_num < 75:
+            inference_searches = 200
+        else:
+            inference_searches = 400  # Full strength for mature models
+            
+        # Create MCTS with dynamic search count
+        args = {
+            'C': 2.0,
+            'num_searches': inference_searches, 
+            'dirichlet_epsilon': 0.0,  # No exploration in play mode
+            'dirichlet_alpha': 0.3,
+            'mcts_batch_size': 1,
+        }
+        mcts = MCTS(game, args, model)
+        
+        current_iteration = iter_num
+        current_model_name = checkpoint_path.name
+        last_loaded_time = time.time()
+        print(f"✅ Loaded {checkpoint_path.name} successfully on {device} (MCTS: {inference_searches})")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error loading model: {e}")
+        return False
+
+def model_watcher():
+    """Background thread to auto-reload newer models"""
+    global auto_reload_enabled
+    while True:
+        try:
+            if auto_reload_enabled:
+                _, latest_iter = find_latest_model()
+                # If we have a new model OR we haven't loaded anything yet
+                if latest_iter > current_iteration or (current_iteration == 0 and latest_iter > 0):
+                    print(f"✨ New model detected (Iter {latest_iter} > {current_iteration})")
+                    load_model()
+        except Exception as e:
+            print(f"Watcher error: {e}")
+        
+        time.sleep(CHECK_INTERVAL_SECONDS)
+
+@app.route('/api/models', methods=['GET'])
+def list_models():
+    """List all available models"""
+    return jsonify({
+        'models': get_available_models(),
+        'current_model': current_model_name,
+        'current_iteration': current_iteration,
+        'auto_reload': auto_reload_enabled
+    })
+
+@app.route('/api/model', methods=['POST'])
+def select_model():
+    """Select a specific model or switch to auto mode"""
+    global auto_reload_enabled
+    data = request.json
+    mode = data.get('mode', 'manual')  # 'auto' or 'manual'
+    filename = data.get('filename')
+    
+    if mode == 'auto':
+        auto_reload_enabled = True
+        # Immediate check
+        load_model()
+        return jsonify({
+            'status': 'success', 
+            'message': 'Switched to Auto-Reload mode',
+            'current_model': current_model_name
+        })
+    else:
+        if not filename:
+            return jsonify({'error': 'Filename required for manual mode'}), 400
+            
+        auto_reload_enabled = False
+        success = load_model(specific_filename=filename)
+        if success:
+            return jsonify({
+                'status': 'success', 
+                'message': f'Loaded {filename}',
+                'current_model': current_model_name
+            })
+        else:
+            return jsonify({'error': f'Failed to load {filename}'}), 404
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -65,6 +235,9 @@ def health():
     return jsonify({
         'status': 'healthy',
         'model_loaded': model is not None,
+        'current_model': current_model_name,
+        'current_iteration': current_iteration,
+        'auto_reload': auto_reload_enabled,
         'device': str(device) if device else None
     })
 
@@ -92,6 +265,7 @@ def predict():
         data = request.json
         board_list = data.get('board')
         player = data.get('player', 2)
+        mcts_searches = data.get('mcts_searches')  # Optional override
         
         if not board_list or len(board_list) != 6 or len(board_list[0]) != 7:
             return jsonify({'error': 'Invalid board format'}), 400
@@ -109,6 +283,10 @@ def predict():
                     ai_board[i][j] = 1  # AI's pieces
                 elif board[i][j] != 0:
                     ai_board[i][j] = -1  # Opponent's pieces
+        
+        # Update MCTS searches if requested
+        if mcts_searches is not None:
+             mcts.args['num_searches'] = int(mcts_searches)
         
         # Get MCTS prediction
         action_probs = mcts.search(ai_board, add_noise=False)
@@ -141,7 +319,10 @@ def predict():
             'policy': action_probs.tolist(),
             'legal_mask': legal_mask,
             'chosen_column': chosen_column,
-            'value': value
+            'value': value,
+            'model_iteration': current_iteration,  # Report which model made the move
+            'model_name': current_model_name,
+            'mcts_searches': mcts.args['num_searches']
         })
         
     except Exception as e:
@@ -160,7 +341,14 @@ if __name__ == '__main__':
         print("  POST /api/predict - Get AI prediction")
         print("="*60 + "\n")
         
-        app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+        print(f"   Watching for new models in: {CHECKPOINT_DIR}")
+        print(f"   Auto-reload interval: {CHECKPOINT_DIR}s")
+        
+        # Start watcher thread
+        watcher = threading.Thread(target=model_watcher, daemon=True)
+        watcher.start()
+        
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
     except Exception as e:
         print(f"❌ Failed to start server: {e}")
         import traceback
