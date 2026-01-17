@@ -11,7 +11,7 @@ sleep 1
 
 # Start training
 echo "Starting training..."
-nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py > training_log_v2.txt 2>&1 &
+nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python training/scripts/train_connect4.py > training_log_v2.txt 2>&1 &
 echo "✅ Training started (PID: $!)"
 sleep 2
 
@@ -20,7 +20,7 @@ echo "Opening training monitor..."
 gnome-terminal --title="🎮 Training Monitor - Full Info" \
     --geometry=140x45 \
     --working-directory="$(pwd)" \
-    -- bash monitor_full.sh &
+    -- bash training/monitors/monitor_full.sh &
 
 sleep 1
 
@@ -29,7 +29,7 @@ echo "Opening evaluation monitor..."
 gnome-terminal --title="🎯 Model Evaluation - Comprehensive" \
     --geometry=130x50 \
     --working-directory="$(pwd)" \
-    -- bash monitor_eval.sh &
+    -- bash training/monitors/monitor_eval.sh &
 
 echo ""
 echo "✅ Monitoring launched!"

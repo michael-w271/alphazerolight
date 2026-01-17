@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 # Add src to python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../src'))
 
 from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet

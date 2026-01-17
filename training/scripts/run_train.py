@@ -3,7 +3,7 @@ import sys
 import os
 
 # Add src to python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../src'))
 
 from alpha_zero_light.game.connect_four import ConnectFour
 from alpha_zero_light.model.network import ResNet
@@ -14,18 +14,15 @@ from alpha_zero_light.config_connect4 import TRAINING_CONFIG, MCTS_CONFIG, MODEL
 
 def main():
     print("="*60)
-    print("AlphaZero Light - Connect Four (4-in-a-Row) Training")
+    print("AlphaZero Light - Connect Four Training")
     print("="*60)
     
-    if torch.cuda.is_available():
-        print(f"🚀 GPU Detected: {torch.cuda.get_device_name(0)}")
-        print(f"💾 VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
-    
-    game = ConnectFour(row_count=6, column_count=7, win_length=4)
+    game = ConnectFour()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
-    print(f"Board: {game.row_count}x{game.column_count}, Win Length: {game.win_length}")
+    if device.type == 'cuda':
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
     print()
     
     # Create model
@@ -73,3 +70,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

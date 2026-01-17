@@ -1,168 +1,166 @@
 #!/usr/bin/env python3
 """
-Real-time training monitor that displays progress and runs periodic evaluations.
-
-Monitors:
-- Training losses (policy, value, total)
-- Model improvement metrics
-- Estimated time remaining
-- Live tactical skill assessment
+Rich-based Training Monitor for AlphaZero.
+Combines high-level metrics with granular log streaming.
 """
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
-
 import time
 import json
 from pathlib import Path
-from datetime import datetime, timedelta
-import subprocess
+from datetime import datetime
+from collections import deque
 
-class TrainingMonitor:
-    """Monitor training progress in real-time."""
-    
-    def __init__(self, checkpoint_dir: str, eval_interval: int = 10):
+from rich.live import Live
+from rich.layout import Layout
+from rich.panel import Panel
+from rich.text import Text
+from rich.ansi import AnsiDecoder
+from rich.console import Group
+
+class RichMonitor:
+    def __init__(self, checkpoint_dir: str, log_file: str):
         self.checkpoint_dir = Path(checkpoint_dir)
-        self.eval_interval = eval_interval
+        self.log_file = log_file
         self.history_file = self.checkpoint_dir / 'training_history.json'
-        self.last_eval_iter = -1
+        
+        # State
+        self.metrics = {}
+        self.log_lines = deque(maxlen=20)
         self.start_time = datetime.now()
         
-    def load_history(self):
-        """Load training history if available."""
-        if self.history_file.exists():
-            with open(self.history_file, 'r') as f:
-                return json.load(f)
-        return []
-    
-    def display_progress(self, history):
-        """Display training progress."""
-        if not history:
-            print("No training data yet...")
+        # Log reading
+        self.log_f = None
+        self.decoder = AnsiDecoder()
+        
+    def open_log(self):
+        """Open log file and seek to end initially."""
+        if os.path.exists(self.log_file):
+            self.log_f = open(self.log_file, 'r')
+            # Seek to end minus some bytes to show context immediately
+            try:
+                self.log_f.seek(0, 2)
+                size = self.log_f.tell()
+                self.log_f.seek(max(0, size - 2000), 0)
+            except:
+                pass
+
+    def update_metrics(self):
+        """Load latest metrics from JSON."""
+        if not self.history_file.exists():
             return
-        
-        latest = history[-1]
-        iteration = latest['iteration']
-        total_iterations = 150  # Target
-        
-        # Clear screen
-        os.system('clear' if os.name != 'nt' else 'cls')
-        
-        print("=" * 80)
-        print(f"🚀 AlphaZero Connect4 Training Monitor - Iteration {iteration}/{total_iterations}")
-        print("=" * 80)
-        print()
-        
-        # Progress bar
-        progress = iteration / total_iterations
-        bar_length = 50
-        filled = int(bar_length * progress)
-        bar = '█' * filled + '░' * (bar_length - filled)
-        print(f"Progress: [{bar}] {progress*100:.1f}%")
-        print()
-        
-        # Training metrics
-        print("📊 Training Metrics (Latest):")
-        print(f"  Total Loss:  {latest.get('total_loss', 0):.4f}")
-        print(f"  Policy Loss: {latest.get('policy_loss', 0):.4f}")
-        print(f"  Value Loss:  {latest.get('value_loss', 0):.4f}")
-        print()
-        
-        # Time estimates
-        elapsed = datetime.now() - self.start_time
-        if iteration > 0:
-            time_per_iter = elapsed / iteration
-            remaining_iters = total_iterations - iteration
-            eta = time_per_iter * remaining_iters
             
-            print(f"⏱️  Time Elapsed: {str(elapsed).split('.')[0]}")
-            print(f"⏱️  Est. Remaining: {str(eta).split('.')[0]}")
-            print(f"⏱️  Time per Iter: {time_per_iter.total_seconds()/60:.1f} min")
-        print()
-        
-        # Recent trend
-        if len(history) >= 5:
-            recent_losses = [h.get('total_loss', 0) for h in history[-5:]]
-            trend = "📉 Decreasing" if recent_losses[-1] < recent_losses[0] else "📈 Increasing"
-            print(f"Loss Trend (last 5): {trend}")
-            print()
-        
-        # Evaluation status
-        latest_model = max([int(p.stem.split('_')[1]) for p in self.checkpoint_dir.glob('model_*.pt')], default=0)
-        next_eval = ((latest_model // self.eval_interval) + 1) * self.eval_interval
-        print(f"📈 Latest Model: model_{latest_model}.pt")
-        print(f"🎯 Next Evaluation: Iteration {next_eval}")
-        print()
-        
-        print("=" * 80)
-        print("Press Ctrl+C to stop monitoring")
-        print("=" * 80)
-    
-    def run_evaluation(self, iteration: int):
-        """Run evaluation on current model."""
-        model_path = self.checkpoint_dir / f"model_{iteration}.pt"
-        
-        if not model_path.exists():
+        try:
+            with open(self.history_file, 'r') as f:
+                data = json.load(f)
+                
+            entry = None
+            # Handle dict-of-lists
+            if isinstance(data, dict) and 'iterations' in data:
+                if data['iterations']:
+                    idx = -1
+                    entry = {k: v[idx] for k, v in data.items() if isinstance(v, list) and v}
+            # Handle list-of-dicts
+            elif isinstance(data, list) and data:
+                entry = data[-1]
+            
+            if entry:
+                self.metrics = entry
+                
+        except Exception:
+            pass # Don't crash on read errors
+
+    def update_log(self):
+        """Read new lines from log file."""
+        if not self.log_f:
+            self.open_log()
             return
+
+        lines = self.log_f.readlines()
+        for line in lines:
+            # Handle carriage returns for progress bars (tqdm)
+            # If line has \r, it's an update to the current line.
+            # But rich.text.Text.from_ansi handles this reasonably well usually,
+            # or we might want to just keep the raw line and let AnsiDecoder handle it.
+            # The issue is \r usually overwrites.
+            # Simple approach: Clean up empty lines and just strip \n
+            clean_line = line.replace('\n', '')
+            if clean_line:
+                 # decode logic will happen in render to keep styles
+                 self.log_lines.append(clean_line)
+
+    def generate_layout(self) -> Layout:
+        layout = Layout()
+        layout.split_column(
+            Layout(name="upper", size=12),
+            Layout(name="lower")
+        )
         
-        print(f"\n🔍 Running evaluation on model_{iteration}.pt...")
+        # Upper: Metrics
+        iter_num = self.metrics.get('iteration', 0)
+        total_iters = 350
         
-        cmd = [
-            '/mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python',
-            'experiments/evaluate_training.py',
-            '--model', str(model_path)
-        ]
-        
+        # Get latest model file
+        latest_model = 0
         try:
-            subprocess.run(cmd, cwd='/mnt/ssd2pro/alpha-zero-light', check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"⚠️  Evaluation failed: {e}")
-    
-    def monitor(self):
-        """Main monitoring loop."""
-        print("🔍 Starting training monitor...")
-        print(f"📁 Watching: {self.checkpoint_dir}")
-        print()
+             latest_model = max([int(p.stem.split('_')[1]) for p in self.checkpoint_dir.glob('model_*.pt') if 'model_' in p.stem], default=0)
+        except:
+             pass
+
+        status_text = Text()
+        status_text.append(f"AlphaZero Training Monitor\n", style="bold magenta")
+        status_text.append(f"Iteration: {iter_num}/{total_iters}  ({(iter_num/total_iters)*100:.1f}%)\n\n", style="cyan")
         
-        last_iteration = -1
+        status_text.append(f"Latest Metrics:\n", style="bold underline")
+        status_text.append(f"  Total Loss : {self.metrics.get('total_loss', 0):.4f}\n")
+        status_text.append(f"  Policy Loss: {self.metrics.get('policy_loss', 0):.4f}\n")
+        status_text.append(f"  Value Loss : {self.metrics.get('value_loss', 0):.4f}\n\n")
         
-        try:
+        status_text.append(f"Latest Checkpoint: model_{latest_model}.pt\n", style="green")
+        
+        elapsed = datetime.now() - self.start_time
+        status_text.append(f"Monitor Running: {str(elapsed).split('.')[0]}", style="dim")
+
+        layout["upper"].update(
+            Panel(status_text, title="Training Status", border_style="blue")
+        )
+        
+        # Lower: Log Stream
+        log_renderables = []
+        for line in self.log_lines:
+            # TQDM uses \r to return to start of line. 
+            # We want to display the FINAL state of that line.
+            # Rich's AnsiDecoder is good at this.
+            log_renderables.append(self.decoder.decode_line(line))
+            
+        layout["lower"].update(
+            Panel(Group(*log_renderables), title="Live Log Stream", border_style="yellow")
+        )
+        
+        return layout
+
+    def run(self):
+        print("Waiting for log file...")
+        while not os.path.exists(self.log_file):
+            time.sleep(1)
+            
+        self.open_log()
+        
+        with Live(self.generate_layout(), refresh_per_second=4, screen=True) as live:
             while True:
-                history = self.load_history()
-                self.display_progress(history)
+                self.update_log()
                 
-                if history:
-                    current_iter = history[-1]['iteration']
+                # Update metrics less frequently
+                if int(time.time() * 10) % 20 == 0: # every 2s
+                    self.update_metrics()
                     
-                    # Check if new model reached evaluation milestone
-                    if current_iter != last_iteration and current_iter % self.eval_interval == 0:
-                        if current_iter > self.last_eval_iter:
-                            self.run_evaluation(current_iter)
-                            self.last_eval_iter = current_iter
-                    
-                    last_iteration = current_iter
-                
-                time.sleep(10)  # Update every 10 seconds
-                
-        except KeyboardInterrupt:
-            print("\n\n👋 Monitoring stopped")
+                live.update(self.generate_layout())
+                time.sleep(0.1)
 
-
-def main():
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Monitor Connect4 training')
-    parser.add_argument('--checkpoint-dir', default='/mnt/ssd2pro/alpha-zero-checkpoints/connect4_v2',
-                        help='Checkpoint directory to monitor')
-    parser.add_argument('--eval-interval', type=int, default=10,
-                        help='Run evaluation every N iterations')
-    
-    args = parser.parse_args()
-    
-    monitor = TrainingMonitor(args.checkpoint_dir, args.eval_interval)
-    monitor.monitor()
-
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    monitor = RichMonitor(
+        checkpoint_dir='checkpoints/connect4',
+        log_file='training_log_v2.txt'
+    )
+    monitor.run()

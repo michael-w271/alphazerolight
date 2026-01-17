@@ -28,7 +28,7 @@ EVAL_COUNT=0
 
 while true; do
     # Find latest model
-    LATEST_MODEL=$(ls checkpoints/connect4/model_*.pt 2>/dev/null | sed "s/.*model_//" | sed "s/.pt//" | sort -n | tail -1)
+    LATEST_MODEL=$(ls ../../checkpoints/connect4/model_*.pt 2>/dev/null | sed "s/.*model_//" | sed "s/.pt//" | sort -n | tail -1)
     
     if [ ! -z "$LATEST_MODEL" ]; then
         # Check if milestone
@@ -44,8 +44,8 @@ while true; do
             echo ""
             
             # Run evaluation
-            /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python experiments/evaluate_training.py \
-                --model checkpoints/connect4/model_${LATEST_MODEL}.pt
+            /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python ../../experiments/evaluate_training.py \
+                --model ../../checkpoints/connect4/model_${LATEST_MODEL}.pt
             
             LAST_EVAL=$LATEST_MODEL
             

@@ -10,7 +10,7 @@ sleep 1
 
 # Start training in background
 echo "Starting training..."
-nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python scripts/train_connect4.py > training_log_v2.txt 2>&1 &
+nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python training/scripts/train_connect4.py > training_log_v2.txt 2>&1 &
 TRAINING_PID=$!
 echo "✅ Training started (PID: $TRAINING_PID)"
 

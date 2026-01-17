@@ -1,7 +1,7 @@
 #!/bin/bash
 # Comprehensive training monitor with clean single-line updates
 
-LOG_FILE="training_log_v2.txt"
+LOG_FILE="../../training_log_v2.txt"
 
 # Colors
 CYAN='\033[1;36m'

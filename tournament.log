@@ -1,0 +1,104 @@
+nohup: ignoring input
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+============================================================
+🥊 PROGRESS CHECK: Model 1 vs Model 15
+============================================================
+Device: cuda
+
+Loading /mnt/ssd2pro/alpha-zero-checkpoints/connect4/model_120.pt...
+  -> Detected ResNet-10 (128 hidden)
+Loading /mnt/ssd2pro/alpha-zero-light/checkpoints/connect4/model_90.pt...
+  -> Detected ResNet-20 (256 hidden)
+
+Match Start! 20 games (100 MCTS searches)
+------------------------------------------------------------
+Game 1/20 (Old/ResNet-10 starts): Game over in 40 moves. Moves: P1:0, P2:6, P1:3, P2:6, P1:0, P2:2, P1:6, P2:2, P1:3, P2:3, P1:3, P2:3, P1:2, P2:2, P1:6, P2:2, P1:2, P2:3, P1:0, P2:0, P1:1, P2:1, P1:0, P2:0, P1:1, P2:1, P1:1, P2:1, P1:5, P2:6, P1:5, P2:5, P1:5, P2:6, P1:5, P2:5, P1:4, P2:4, P1:4, P2:4
+
+  0 1 2 3 4 5 6
+|🟡🟡🔴🟡 .🟡🟡|
+|🔴🔴🟡🟡 .🔴🟡|
+|🟡🟡🟡🔴🟡🔴🔴|
+|🔴🔴🔴🟡🔴🟡🔴|
+|🔴🟡🟡🔴🟡🔴🟡|
+|🔴🔴🟡🔴🔴🔴🟡|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+New (ResNet-20) Wins 🌟
+Game 2/20 (Old/ResNet-10 starts): Game over in 30 moves. Moves: P1:1, P2:4, P1:1, P2:1, P1:1, P2:3, P1:2, P2:2, P1:3, P2:3, P1:3, P2:5, P1:6, P2:2, P1:2, P2:2, P1:6, P2:5, P1:5, P2:5, P1:6, P2:6, P1:3, P2:3, P1:6, P2:0, P1:5, P2:0, P1:0, P2:0
+
+  0 1 2 3 4 5 6
+| . . .🟡 . . .|
+| . .🟡🔴 .🔴🔴|
+|🟡🔴🔴🔴 .🟡🟡|
+|🔴🟡🟡🟡 .🔴🔴|
+|🟡🔴🟡🔴 .🟡🔴|
+|🟡🔴🔴🟡🟡🟡🔴|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+New (ResNet-20) Wins 🌟
+Game 3/20 (Old/ResNet-10 starts): Game over in 17 moves. Moves: P1:6, P2:3, P1:6, P2:4, P1:6, P2:6, P1:2, P2:2, P1:3, P2:3, P1:1, P2:5, P1:3, P2:3, P1:5, P2:4, P1:4
+
+  0 1 2 3 4 5 6
+| . . . . . . .|
+| . . .🟡 . . .|
+| . . .🔴 . .🟡|
+| . . .🟡🔴 .🔴|
+| . .🟡🔴🟡🔴🔴|
+| .🔴🔴🟡🟡🟡🔴|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+Old (ResNet-10) Wins 🏆
+Game 4/20 (Old/ResNet-10 starts): Game over in 36 moves. Moves: P1:2, P2:2, P1:0, P2:4, P1:1, P2:3, P1:1, P2:6, P1:5, P2:4, P1:2, P2:4, P1:4, P2:3, P1:5, P2:5, P1:3, P2:3, P1:2, P2:3, P1:6, P2:2, P1:4, P2:1, P1:1, P2:5, P1:4, P2:5, P1:5, P2:2, P1:3, P2:1, P1:1, P2:0, P1:6, P2:6
+
+  0 1 2 3 4 5 6
+| .🔴🟡🔴🔴🔴 .|
+| .🟡🟡🟡🔴🟡 .|
+| .🔴🔴🟡🔴🟡🟡|
+| .🟡🔴🔴🟡🟡🔴|
+|🟡🔴🟡🟡🟡🔴🔴|
+|🔴🔴🔴🟡🟡🔴🟡|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+New (ResNet-20) Wins 🌟
+Game 5/20 (Old/ResNet-10 starts): Game over in 38 moves. Moves: P1:0, P2:4, P1:2, P2:2, P1:4, P2:1, P1:6, P2:0, P1:1, P2:2, P1:2, P2:2, P1:0, P2:0, P1:1, P2:1, P1:1, P2:4, P1:0, P2:3, P1:3, P2:3, P1:4, P2:3, P1:1, P2:3, P1:3, P2:2, P1:6, P2:4, P1:6, P2:6, P1:0, P2:4, P1:6, P2:6, P1:5, P2:5
+
+  0 1 2 3 4 5 6
+|🔴🔴🟡🔴🟡 .🟡|
+|🔴🔴🟡🟡🟡 .🔴|
+|🟡🟡🔴🟡🔴 .🟡|
+|🔴🔴🟡🟡🟡 .🔴|
+|🟡🔴🟡🔴🔴🟡🔴|
+|🔴🟡🔴🟡🟡🔴🔴|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+New (ResNet-20) Wins 🌟
+Game 6/20 (Old/ResNet-10 starts): Game over in 42 moves. Moves: P1:2, P2:2, P1:0, P2:4, P1:2, P2:1, P1:4, P2:2, P1:6, P2:1, P1:0, P2:5, P1:5, P2:4, P1:2, P2:4, P1:2, P2:3, P1:6, P2:3, P1:3, P2:1, P1:1, P2:1, P1:5, P2:5, P1:3, P2:3, P1:3, P2:0, P1:0, P2:1, P1:5, P2:5, P1:6, P2:6, P1:6, P2:6, P1:0, P2:0, P1:4, P2:4
+
+  0 1 2 3 4 5 6
+|🟡🟡🔴🔴🟡🟡🟡|
+|🔴🟡🔴🟡🔴🔴🔴|
+|🔴🔴🟡🔴🟡🟡🟡|
+|🟡🟡🔴🔴🟡🔴🔴|
+|🔴🟡🟡🟡🔴🔴🔴|
+|🔴🟡🔴🟡🟡🟡🔴|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+New (ResNet-20) Wins 🌟
+Game 7/20 (Old/ResNet-10 starts): Game over in 39 moves. Moves: P1:0, P2:4, P1:3, P2:3, P1:2, P2:1, P1:2, P2:4, P1:2, P2:2, P1:3, P2:4, P1:4, P2:3, P1:4, P2:3, P1:4, P2:2, P1:0, P2:5, P1:5, P2:3, P1:0, P2:0, P1:6, P2:5, P1:5, P2:5, P1:6, P2:6, P1:6, P2:0, P1:6, P2:6, P1:5, P2:2, P1:0, P2:1, P1:1
+
+  0 1 2 3 4 5 6
+|🔴 .🟡🟡🔴🔴🟡|
+|🟡 .🟡🟡🔴🟡🔴|
+|🟡 .🟡🟡🔴🔴🔴|
+|🔴🔴🔴🔴🟡🟡🟡|
+|🔴🟡🔴🟡🟡🔴🔴|
+|🔴🟡🔴🔴🟡🟡🔴|
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯
+
+Old (ResNet-10) Wins 🏆
+Game 8/20 (Old/ResNet-10 starts): 
