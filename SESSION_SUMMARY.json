@@ -1,0 +1,143 @@
+{
+  "session_date": "2026-01-18",
+  "objective": "Implement Teacher-Solver Expert-Iteration Training Pipeline for Connect4",
+  
+  "implementation_status": {
+    "overall_completion": "85%",
+    "components_completed": [
+      "TeacherSolver module (~500 lines)",
+      "Opening randomization module (~250 lines)", 
+      "Configuration integration (TEACHER_SOLVER_CONFIG)",
+      "Trainer modifications (teacher-guided self-play method)",
+      "Statistics logging infrastructure"
+    ],
+    "components_partial": [
+      "MCTS configuration tuning (progressive schedule still uses 400 searches)",
+      "Opening strategy (simplified to MCTS-only, safety filter unused)"
+    ]
+  },
+
+  "key_achievements": {
+    "modules_created": [
+      "src/alpha_zero_light/training/teacher_solver.py",
+      "src/alpha_zero_light/training/opening_randomization.py",
+      "src/alpha_zero_light/training/teacher_self_play.py"
+    ],
+    "modules_modified": [
+      "src/alpha_zero_light/config_connect4.py",
+      "src/alpha_zero_light/training/trainer.py"
+    ],
+    "warm_start_confirmed": "model_195.pt loaded successfully",
+    "syntax_validated": "All modules compile without errors"
+  },
+
+  "current_issues": {
+    "speed": {
+      "problem": "Training is slower than expected (~9 sec/game)",
+      "root_cause": "Progressive MCTS schedule still uses 400 searches for iteration 197",
+      "attempted_fix": "Changed MCTS_CONFIG to 50, but progressive schedule overrides it",
+      "status": "UNRESOLVED"
+    },
+    "configuration": {
+      "problem": "Multiple MCTS search configs conflicting",
+      "locations": [
+        "TRAINING_CONFIG.mcts_schedule (lines 23-29): 50→100→200→300→400",
+        "MCTS_CONFIG.num_searches (line 82): Changed to 50"
+      ],
+      "solution_needed": "Set ALL mcts_schedule entries to 50"
+    }
+  },
+
+  "teacher_solver_strategy": {
+    "opening_plies_0_15": {
+      "method": "100-search MCTS",
+      "rationale": "Solver too slow, NN has encoding overhead",
+      "temperature": "Handled by trainer's sampling"
+    },
+    "mid_late_game_16_plus": {
+      "method": "Solver with probability schedule",
+      "schedule": {
+        "ply_16_20": "70% solver",
+        "ply_21_26": "90% solver", 
+        "ply_27_35": "97% solver",
+        "ply_36_42": "99% solver"
+      }
+    },
+    "forced_win_override": {
+      "enabled": true,
+      "threshold": "Distance-to-win ≤ 8 plies",
+      "behavior": "Forces solver move 100%"
+    }
+  },
+
+  "next_session_instructions": {
+    "step_1_fix_mcts_schedule": {
+      "file": "src/alpha_zero_light/config_connect4.py",
+      "line_range": "23-29",
+      "action": "Change ALL num_searches values to 50",
+      "example": "{'until_iteration': 25, 'num_searches': 50}",
+      "reason": "Progressive schedule overrides MCTS_CONFIG"
+    },
+    
+    "step_2_start_training": {
+      "command": "cd /mnt/ssd2pro/alpha-zero-light && source env_config.sh && nohup python training/scripts/train_connect4.py > training_teacher_solver.log 2>&1 &",
+      "save_pid": "echo $! > training.pid",
+      "verify": "tail -f training_teacher_solver.log"
+    },
+    
+    "step_3_monitor_progress": {
+      "check_speed": "Should see ~3-5 sec/game with 50 MCTS",
+      "check_solver_stats": "Look for '📊 Teacher-Solver Statistics' after each iteration",
+      "check_iteration": "Should complete iteration 197 in ~10-15 minutes",
+      "watch_command": "watch -n 5 'tail -30 training_teacher_solver.log | grep \"Self-play\\|Generated\\|Teacher\"'"
+    },
+
+    "step_4_validate_first_iteration": {
+      "expected_output": [
+        "✅ Generated ~4500 training samples from 150 games",
+        "📊 Teacher-Solver Statistics:",
+        "   Opening moves: ~45% (plies 0-15)",
+        "   Solver moves: ~50% (plies 16+)",  
+        "   Avg solver time: <500ms"
+      ],
+      "if_successful": "Let training run for 10-20 iterations",
+      "if_failed": "Check logs for errors, may need to debug solver calls"
+    },
+
+    "step_5_long_term_monitoring": {
+      "baseline_comparison": "After 20 iterations, compare new model vs model_195.pt",
+      "expected_improvement": "New model should show stronger play due to solver labels",
+      "evaluation_script": "scripts/compare_models.py or similar"
+    }
+  },
+
+  "debugging_tips": {
+    "if_still_slow": [
+      "Verify MCTS searches with: grep 'MCTS searches:' training_teacher_solver.log",
+      "Should see '50' not '400'",
+      "If seeing 400, check trainer.py line ~800+ for _get_progressive_mcts_searches()"
+    ],
+    "if_solver_errors": [
+      "Check solver binary: solvers/connect4/c4solver",
+      "Test solver manually: python -c 'from alpha_zero_light.data.solver_interface import Connect4Solver; s=Connect4Solver(); print(s.solve_position(\"4444\"))'"
+    ],
+    "if_no_teacher_stats": [
+      "Stats only printed for 'self_play' game type",
+      "Check trainer.py lines ~980-1005 for teacher-solver logging block"
+    ]
+  },
+
+  "files_to_review_next_session": [
+    "src/alpha_zero_light/config_connect4.py (lines 23-29, 82)",
+    "training_teacher_solver.log (once created)",
+    "SESSION_SUMMARY.json (this file)"
+  ],
+
+  "estimated_time_to_completion": {
+    "fix_config": "5 minutes",
+    "start_training": "1 minute",
+    "first_iteration": "10-15 minutes",
+    "validation": "5 minutes",
+    "total": "~25 minutes to confirm working"
+  }
+}

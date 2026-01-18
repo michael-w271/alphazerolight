@@ -1,0 +1,334 @@
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+======================================================================
+               ALPHAZERO SELF-PLAY POSITION GENERATION
+======================================================================
+
+Generating 500 positions
+Checkpoint every 500 positions
+Temperature: 0.5 (focused)
+Random opening: 3 moves
+Verbose mode: ON (showing first 3 games)
+
+Strategy: Use model_195 to generate tactically interesting positions
+Then label with solver for perfect supervision
+
+Loading AlphaZero model...
+✓ Loaded model_195 on cuda
+
+Generating positions via self-play...
+This uses your trained model, so positions will be high-quality!
+Generating positions via self-play:   0%|          | 0/500 [00:00<?, ?it/s]Generating positions via self-play:   0%|          | 1/500 [00:01<16:34,  1.99s/it]Generating positions via self-play:   0%|          | 2/500 [00:02<07:45,  1.07it/s]Generating positions via self-play:   1%|          | 3/500 [00:02<04:57,  1.67it/s]Generating positions via self-play:   1%|          | 4/500 [00:02<03:37,  2.28it/s]Generating positions via self-play:   1%|          | 5/500 [00:02<02:53,  2.86it/s]Generating positions via self-play:   1%|          | 6/500 [00:02<02:26,  3.37it/s]Generating positions via self-play:   1%|▏         | 7/500 [00:03<02:10,  3.78it/s]Generating positions via self-play:   2%|▏         | 8/500 [00:03<01:55,  4.25it/s]Generating positions via self-play:   2%|▏         | 9/500 [00:03<01:47,  4.58it/s]Generating positions via self-play:   2%|▏         | 10/500 [00:03<01:35,  5.12it/s]Generating positions via self-play:   2%|▏         | 11/500 [00:03<01:29,  5.46it/s]Generating positions via self-play:   2%|▏         | 12/500 [00:05<05:02,  1.61it/s]Generating positions via self-play:   3%|▎         | 13/500 [00:05<03:59,  2.03it/s]Generating positions via self-play:   3%|▎         | 14/500 [00:05<03:15,  2.48it/s]Generating positions via self-play:   3%|▎         | 15/500 [00:06<02:45,  2.93it/s]Generating positions via self-play:   3%|▎         | 16/500 [00:06<02:23,  3.36it/s]Generating positions via self-play:   3%|▎         | 17/500 [00:06<02:07,  3.78it/s]Generating positions via self-play:   4%|▎         | 18/500 [00:06<01:57,  4.12it/s]Generating positions via self-play:   4%|▍         | 19/500 [00:06<01:48,  4.43it/s]Generating positions via self-play:   4%|▍         | 20/500 [00:06<01:43,  4.63it/s]Generating positions via self-play:   4%|▍         | 21/500 [00:07<01:38,  4.85it/s]Generating positions via self-play:   5%|▍         | 23/500 [00:07<01:23,  5.72it/s]Generating positions via self-play:   5%|▍         | 24/500 [00:07<01:17,  6.14it/s]Generating positions via self-play:   5%|▌         | 25/500 [00:07<01:13,  6.43it/s]Generating positions via self-play:   5%|▌         | 26/500 [00:09<04:43,  1.67it/s]Generating positions via self-play:   5%|▌         | 27/500 [00:09<03:50,  2.06it/s]Generating positions via self-play:   6%|▌         | 28/500 [00:09<03:09,  2.49it/s]Generating positions via self-play:   6%|▌         | 29/500 [00:10<02:41,  2.93it/s]Generating positions via self-play:   6%|▌         | 30/500 [00:10<02:19,  3.36it/s]Generating positions via self-play:   6%|▌         | 31/500 [00:10<02:05,  3.73it/s]Generating positions via self-play:   6%|▋         | 32/500 [00:10<01:49,  4.26it/s]Generating positions via self-play:   7%|▋         | 33/500 [00:10<01:44,  4.48it/s]Generating positions via self-play:   7%|▋         | 35/500 [00:10<01:15,  6.15it/s]Generating positions via self-play:   7%|▋         | 36/500 [00:11<01:13,  6.33it/s]Generating positions via self-play:   7%|▋         | 37/500 [00:11<01:06,  6.97it/s]Generating positions via self-play:   8%|▊         | 39/500 [00:11<00:50,  9.13it/s]Generating positions via self-play:   8%|▊         | 41/500 [00:13<03:05,  2.47it/s]Generating positions via self-play:   8%|▊         | 42/500 [00:13<02:45,  2.77it/s]Generating positions via self-play:   9%|▊         | 43/500 [00:13<02:26,  3.11it/s]Generating positions via self-play:   9%|▉         | 44/500 [00:13<02:11,  3.46it/s]Generating positions via self-play:   9%|▉         | 45/500 [00:13<02:00,  3.78it/s]Generating positions via self-play:   9%|▉         | 46/500 [00:14<01:51,  4.08it/s]Generating positions via self-play:   9%|▉         | 47/500 [00:14<01:44,  4.35it/s]Generating positions via self-play:  10%|▉         | 48/500 [00:14<01:38,  4.60it/s]Generating positions via self-play:  10%|▉         | 49/500 [00:14<01:31,  4.91it/s]Generating positions via self-play:  10%|█         | 50/500 [00:14<01:27,  5.16it/s]Generating positions via self-play:  10%|█         | 51/500 [00:16<04:53,  1.53it/s]Generating positions via self-play:  10%|█         | 52/500 [00:16<03:52,  1.93it/s]Generating positions via self-play:  11%|█         | 53/500 [00:16<03:09,  2.36it/s]Generating positions via self-play:  11%|█         | 54/500 [00:17<02:37,  2.83it/s]Generating positions via self-play:  11%|█         | 55/500 [00:17<02:16,  3.26it/s]Generating positions via self-play:  11%|█         | 56/500 [00:17<02:01,  3.66it/s]Generating positions via self-play:  11%|█▏        | 57/500 [00:17<01:49,  4.03it/s]Generating positions via self-play:  12%|█▏        | 58/500 [00:17<01:42,  4.30it/s]Generating positions via self-play:  12%|█▏        | 59/500 [00:18<01:31,  4.80it/s]Generating positions via self-play:  12%|█▏        | 60/500 [00:18<01:28,  4.96it/s]Generating positions via self-play:  12%|█▏        | 61/500 [00:18<01:26,  5.06it/s]Generating positions via self-play:  12%|█▏        | 62/500 [00:18<01:22,  5.30it/s]Generating positions via self-play:  13%|█▎        | 64/500 [00:20<03:56,  1.85it/s]Generating positions via self-play:  13%|█▎        | 65/500 [00:20<03:19,  2.18it/s]Generating positions via self-play:  13%|█▎        | 66/500 [00:20<02:50,  2.55it/s]Generating positions via self-play:  13%|█▎        | 67/500 [00:21<02:28,  2.92it/s]Generating positions via self-play:  14%|█▎        | 68/500 [00:21<02:11,  3.29it/s]Generating positions via self-play:  14%|█▍        | 69/500 [00:21<01:59,  3.62it/s]Generating positions via self-play:  14%|█▍        | 70/500 [00:21<01:49,  3.91it/s]Generating positions via self-play:  14%|█▍        | 71/500 [00:21<01:43,  4.15it/s]Generating positions via self-play:  14%|█▍        | 72/500 [00:22<01:37,  4.38it/s]Generating positions via self-play:  15%|█▍        | 73/500 [00:22<01:30,  4.74it/s]Generating positions via self-play:  15%|█▌        | 75/500 [00:22<01:06,  6.37it/s]Generating positions via self-play:  15%|█▌        | 76/500 [00:22<01:10,  5.98it/s]Generating positions via self-play:  15%|█▌        | 77/500 [00:22<01:06,  6.32it/s]Generating positions via self-play:  16%|█▌        | 78/500 [00:24<04:24,  1.60it/s]Generating positions via self-play:  16%|█▌        | 79/500 [00:24<03:34,  1.97it/s]Generating positions via self-play:  16%|█▌        | 80/500 [00:25<02:45,  2.53it/s]Generating positions via self-play:  16%|█▌        | 81/500 [00:25<02:11,  3.19it/s]Generating positions via self-play:  17%|█▋        | 83/500 [00:25<01:29,  4.68it/s]Generating positions via self-play:  17%|█▋        | 85/500 [00:25<01:13,  5.61it/s]Generating positions via self-play:  17%|█▋        | 86/500 [00:25<01:15,  5.51it/s]Generating positions via self-play:  17%|█▋        | 87/500 [00:25<01:12,  5.72it/s]Generating positions via self-play:  18%|█▊        | 88/500 [00:26<01:08,  6.01it/s]Generating positions via self-play:  18%|█▊        | 89/500 [00:26<01:06,  6.13it/s]Generating positions via self-play:  18%|█▊        | 91/500 [00:26<00:54,  7.47it/s]Generating positions via self-play:  18%|█▊        | 92/500 [00:28<03:22,  2.02it/s]Generating positions via self-play:  19%|█▊        | 93/500 [00:28<02:52,  2.37it/s]Generating positions via self-play:  19%|█▉        | 94/500 [00:28<02:28,  2.74it/s]Generating positions via self-play:  19%|█▉        | 95/500 [00:28<02:10,  3.11it/s]Generating positions via self-play:  19%|█▉        | 96/500 [00:28<01:56,  3.46it/s]Generating positions via self-play:  19%|█▉        | 97/500 [00:29<01:47,  3.77it/s]Generating positions via self-play:  20%|█▉        | 98/500 [00:29<01:40,  4.02it/s]Generating positions via self-play:  20%|█▉        | 99/500 [00:29<01:34,  4.24it/s]Generating positions via self-play:  20%|██        | 100/500 [00:29<01:27,  4.57it/s]Generating positions via self-play:  20%|██        | 101/500 [00:29<01:21,  4.89it/s]Generating positions via self-play:  20%|██        | 102/500 [00:30<01:16,  5.24it/s]Generating positions via self-play:  21%|██        | 103/500 [00:30<01:17,  5.12it/s]Generating positions via self-play:  21%|██        | 104/500 [00:30<01:18,  5.07it/s]Generating positions via self-play:  21%|██        | 105/500 [00:30<01:18,  5.02it/s]Generating positions via self-play:  21%|██        | 106/500 [00:32<04:13,  1.56it/s]Generating positions via self-play:  21%|██▏       | 107/500 [00:32<03:20,  1.96it/s]Generating positions via self-play:  22%|██▏       | 108/500 [00:32<02:42,  2.42it/s]Generating positions via self-play:  22%|██▏       | 109/500 [00:32<02:17,  2.84it/s]Generating positions via self-play:  22%|██▏       | 110/500 [00:33<02:00,  3.25it/s]Generating positions via self-play:  22%|██▏       | 111/500 [00:33<01:48,  3.60it/s]Generating positions via self-play:  22%|██▏       | 112/500 [00:33<01:38,  3.92it/s]Generating positions via self-play:  23%|██▎       | 113/500 [00:33<01:30,  4.28it/s]Generating positions via self-play:  23%|██▎       | 114/500 [00:33<01:26,  4.45it/s]Generating positions via self-play:  23%|██▎       | 115/500 [00:34<01:18,  4.92it/s]Generating positions via self-play:  23%|██▎       | 116/500 [00:34<01:17,  4.93it/s]Generating positions via self-play:  23%|██▎       | 117/500 [00:34<01:16,  5.00it/s]Generating positions via self-play:  24%|██▍       | 119/500 [00:34<00:56,  6.73it/s]Generating positions via self-play:  24%|██▍       | 120/500 [00:36<03:23,  1.86it/s]Generating positions via self-play:  24%|██▍       | 121/500 [00:36<02:49,  2.23it/s]Generating positions via self-play:  24%|██▍       | 122/500 [00:36<02:24,  2.62it/s]Generating positions via self-play:  25%|██▍       | 123/500 [00:36<02:03,  3.05it/s]Generating positions via self-play:  25%|██▍       | 124/500 [00:37<01:49,  3.43it/s]Generating positions via self-play:  25%|██▌       | 125/500 [00:37<01:39,  3.76it/s]Generating positions via self-play:  25%|██▌       | 126/500 [00:37<01:33,  4.02it/s]Generating positions via self-play:  25%|██▌       | 127/500 [00:37<01:28,  4.24it/s]Generating positions via self-play:  26%|██▌       | 128/500 [00:38<01:23,  4.43it/s]Generating positions via self-play:  26%|██▌       | 129/500 [00:38<01:21,  4.55it/s]Generating positions via self-play:  26%|██▌       | 130/500 [00:38<01:19,  4.65it/s]Generating positions via self-play:  26%|██▌       | 131/500 [00:38<01:14,  4.97it/s]Generating positions via self-play:  26%|██▋       | 132/500 [00:38<01:03,  5.76it/s]Generating positions via self-play:  27%|██▋       | 133/500 [00:38<01:00,  6.10it/s]Generating positions via self-play:  27%|██▋       | 134/500 [00:40<04:01,  1.51it/s]Generating positions via self-play:  27%|██▋       | 135/500 [00:40<03:11,  1.91it/s]Generating positions via self-play:  27%|██▋       | 136/500 [00:41<02:36,  2.33it/s]Generating positions via self-play:  27%|██▋       | 137/500 [00:41<02:09,  2.81it/s]Generating positions via self-play:  28%|██▊       | 139/500 [00:41<01:28,  4.06it/s]Generating positions via self-play:  28%|██▊       | 140/500 [00:41<01:23,  4.31it/s]Generating positions via self-play:  28%|██▊       | 141/500 [00:41<01:18,  4.59it/s]Generating positions via self-play:  29%|██▊       | 143/500 [00:42<01:02,  5.70it/s]Generating positions via self-play:  29%|██▉       | 144/500 [00:42<01:00,  5.86it/s]Generating positions via self-play:  29%|██▉       | 145/500 [00:42<00:57,  6.20it/s]Generating positions via self-play:  30%|██▉       | 148/500 [00:44<02:20,  2.50it/s]Generating positions via self-play:  30%|██▉       | 149/500 [00:44<02:06,  2.78it/s]Generating positions via self-play:  30%|███       | 151/500 [00:44<01:29,  3.90it/s]Generating positions via self-play:  30%|███       | 152/500 [00:44<01:20,  4.33it/s]Generating positions via self-play:  31%|███       | 154/500 [00:44<00:58,  5.88it/s]Generating positions via self-play:  31%|███       | 155/500 [00:45<01:01,  5.63it/s]Generating positions via self-play:  31%|███       | 156/500 [00:45<01:03,  5.43it/s]Generating positions via self-play:  31%|███▏      | 157/500 [00:45<01:04,  5.28it/s]Generating positions via self-play:  32%|███▏      | 158/500 [00:45<01:05,  5.25it/s]Generating positions via self-play:  32%|███▏      | 159/500 [00:45<01:05,  5.20it/s]Generating positions via self-play:  32%|███▏      | 161/500 [00:46<00:53,  6.33it/s]Generating positions via self-play:  32%|███▏      | 162/500 [00:47<03:07,  1.80it/s]Generating positions via self-play:  33%|███▎      | 163/500 [00:48<02:37,  2.14it/s]Generating positions via self-play:  33%|███▎      | 164/500 [00:48<02:13,  2.51it/s]Generating positions via self-play:  33%|███▎      | 165/500 [00:48<01:55,  2.89it/s]Generating positions via self-play:  33%|███▎      | 166/500 [00:48<01:42,  3.26it/s]Generating positions via self-play:  33%|███▎      | 167/500 [00:48<01:32,  3.60it/s]Generating positions via self-play:  34%|███▎      | 168/500 [00:49<01:25,  3.88it/s]Generating positions via self-play:  34%|███▍      | 169/500 [00:49<01:20,  4.13it/s]Generating positions via self-play:  34%|███▍      | 170/500 [00:49<01:16,  4.32it/s]Generating positions via self-play:  34%|███▍      | 171/500 [00:49<01:13,  4.46it/s]Generating positions via self-play:  34%|███▍      | 172/500 [00:49<01:11,  4.56it/s]Generating positions via self-play:  35%|███▍      | 173/500 [00:50<01:10,  4.65it/s]Generating positions via self-play:  35%|███▍      | 174/500 [00:50<01:08,  4.74it/s]Generating positions via self-play:  35%|███▌      | 175/500 [00:50<01:07,  4.82it/s]Generating positions via self-play:  35%|███▌      | 176/500 [00:52<03:48,  1.42it/s]Generating positions via self-play:  35%|███▌      | 177/500 [00:52<02:59,  1.80it/s]Generating positions via self-play:  36%|███▌      | 178/500 [00:52<02:25,  2.22it/s]Generating positions via self-play:  36%|███▌      | 179/500 [00:53<02:01,  2.65it/s]Generating positions via self-play:  36%|███▌      | 180/500 [00:53<01:44,  3.06it/s]Generating positions via self-play:  36%|███▌      | 181/500 [00:53<01:32,  3.44it/s]Generating positions via self-play:  36%|███▋      | 182/500 [00:53<01:24,  3.76it/s]Generating positions via self-play:  37%|███▋      | 183/500 [00:53<01:18,  4.03it/s]Generating positions via self-play:  37%|███▋      | 184/500 [00:54<01:14,  4.23it/s]Generating positions via self-play:  37%|███▋      | 185/500 [00:54<01:08,  4.58it/s]Generating positions via self-play:  37%|███▋      | 186/500 [00:54<01:02,  4.99it/s]Generating positions via self-play:  37%|███▋      | 187/500 [00:54<00:59,  5.30it/s]Generating positions via self-play:  38%|███▊      | 188/500 [00:54<00:54,  5.69it/s]Generating positions via self-play:  38%|███▊      | 189/500 [00:54<00:55,  5.56it/s]Generating positions via self-play:  38%|███▊      | 190/500 [00:56<03:27,  1.49it/s]Generating positions via self-play:  38%|███▊      | 191/500 [00:56<02:43,  1.88it/s]Generating positions via self-play:  38%|███▊      | 192/500 [00:57<02:13,  2.31it/s]Generating positions via self-play:  39%|███▊      | 193/500 [00:57<01:50,  2.77it/s]Generating positions via self-play:  39%|███▉      | 194/500 [00:57<01:31,  3.36it/s]Generating positions via self-play:  39%|███▉      | 195/500 [00:57<01:16,  3.97it/s]Generating positions via self-play:  39%|███▉      | 196/500 [00:57<01:11,  4.26it/s]Generating positions via self-play:  39%|███▉      | 197/500 [00:58<01:08,  4.43it/s]Generating positions via self-play:  40%|███▉      | 198/500 [00:58<01:05,  4.62it/s]Generating positions via self-play:  40%|███▉      | 199/500 [00:58<01:02,  4.81it/s]Generating positions via self-play:  40%|████      | 200/500 [00:58<00:54,  5.50it/s]Generating positions via self-play:  40%|████      | 201/500 [00:58<00:55,  5.40it/s]Generating positions via self-play:  41%|████      | 203/500 [00:58<00:41,  7.15it/s]Generating positions via self-play:  41%|████      | 204/500 [01:00<02:47,  1.77it/s]Generating positions via self-play:  41%|████      | 205/500 [01:00<02:13,  2.22it/s]Generating positions via self-play:  41%|████      | 206/500 [01:01<01:51,  2.63it/s]Generating positions via self-play:  41%|████▏     | 207/500 [01:01<01:29,  3.28it/s]Generating positions via self-play:  42%|████▏     | 209/500 [01:01<01:00,  4.80it/s]Generating positions via self-play:  42%|████▏     | 210/500 [01:01<00:54,  5.32it/s]Generating positions via self-play:  42%|████▏     | 211/500 [01:01<00:50,  5.74it/s]Generating positions via self-play:  42%|████▏     | 212/500 [01:01<00:46,  6.23it/s]Generating positions via self-play:  43%|████▎     | 213/500 [01:01<00:45,  6.33it/s]Generating positions via self-play:  43%|████▎     | 214/500 [01:03<03:05,  1.54it/s]Generating positions via self-play:  43%|████▎     | 215/500 [01:04<02:28,  1.92it/s]Generating positions via self-play:  43%|████▎     | 216/500 [01:04<02:01,  2.34it/s]Generating positions via self-play:  43%|████▎     | 217/500 [01:04<01:42,  2.76it/s]Generating positions via self-play:  44%|████▎     | 218/500 [01:04<01:29,  3.16it/s]Generating positions via self-play:  44%|████▍     | 219/500 [01:04<01:19,  3.52it/s]Generating positions via self-play:  44%|████▍     | 220/500 [01:05<01:13,  3.82it/s]Generating positions via self-play:  44%|████▍     | 221/500 [01:05<01:08,  4.08it/s]Generating positions via self-play:  44%|████▍     | 222/500 [01:05<01:04,  4.28it/s]Generating positions via self-play:  45%|████▍     | 223/500 [01:05<01:01,  4.50it/s]Generating positions via self-play:  45%|████▍     | 224/500 [01:05<00:58,  4.68it/s]Generating positions via self-play:  45%|████▌     | 225/500 [01:06<00:56,  4.85it/s]Generating positions via self-play:  45%|████▌     | 226/500 [01:06<00:56,  4.87it/s]Generating positions via self-play:  45%|████▌     | 227/500 [01:06<00:52,  5.23it/s]Generating positions via self-play:  46%|████▌     | 228/500 [01:08<03:08,  1.45it/s]Generating positions via self-play:  46%|████▌     | 229/500 [01:08<02:26,  1.84it/s]Generating positions via self-play:  46%|████▌     | 231/500 [01:08<01:31,  2.94it/s]Generating positions via self-play:  46%|████▋     | 232/500 [01:08<01:21,  3.27it/s]Generating positions via self-play:  47%|████▋     | 233/500 [01:09<01:13,  3.64it/s]Generating positions via self-play:  47%|████▋     | 234/500 [01:09<01:06,  4.00it/s]Generating positions via self-play:  47%|████▋     | 235/500 [01:09<01:02,  4.24it/s]Generating positions via self-play:  47%|████▋     | 236/500 [01:09<00:59,  4.44it/s]Generating positions via self-play:  47%|████▋     | 237/500 [01:09<00:57,  4.61it/s]Generating positions via self-play:  48%|████▊     | 238/500 [01:10<00:54,  4.85it/s]Generating positions via self-play:  48%|████▊     | 241/500 [01:11<01:54,  2.27it/s]Generating positions via self-play:  48%|████▊     | 242/500 [01:12<01:41,  2.55it/s]Generating positions via self-play:  49%|████▊     | 243/500 [01:12<01:29,  2.87it/s]Generating positions via self-play:  49%|████▉     | 244/500 [01:12<01:20,  3.18it/s]Generating positions via self-play:  49%|████▉     | 245/500 [01:12<01:12,  3.50it/s]Generating positions via self-play:  49%|████▉     | 246/500 [01:12<01:07,  3.78it/s]Generating positions via self-play:  49%|████▉     | 247/500 [01:13<01:02,  4.03it/s]Generating positions via self-play:  50%|████▉     | 248/500 [01:13<00:59,  4.24it/s]Generating positions via self-play:  50%|████▉     | 249/500 [01:13<00:56,  4.43it/s]Generating positions via self-play:  50%|█████     | 250/500 [01:13<00:54,  4.55it/s]Generating positions via self-play:  50%|█████     | 251/500 [01:13<00:53,  4.63it/s]Generating positions via self-play:  50%|█████     | 252/500 [01:14<00:52,  4.70it/s]Generating positions via self-play:  51%|█████     | 253/500 [01:14<00:52,  4.73it/s]Generating positions via self-play:  51%|█████     | 254/500 [01:14<00:50,  4.88it/s]Generating positions via self-play:  51%|█████     | 255/500 [01:16<02:51,  1.43it/s]Generating positions via self-play:  51%|█████▏    | 257/500 [01:16<01:41,  2.39it/s]Generating positions via self-play:  52%|█████▏    | 258/500 [01:16<01:28,  2.73it/s]Generating positions via self-play:  52%|█████▏    | 259/500 [01:17<01:17,  3.10it/s]Generating positions via self-play:  52%|█████▏    | 260/500 [01:17<01:09,  3.44it/s]Generating positions via self-play:  52%|█████▏    | 261/500 [01:17<01:02,  3.80it/s]Generating positions via self-play:  52%|█████▏    | 262/500 [01:17<00:58,  4.08it/s]Generating positions via self-play:  53%|█████▎    | 264/500 [01:17<00:42,  5.54it/s]Generating positions via self-play:  53%|█████▎    | 266/500 [01:17<00:32,  7.27it/s]Generating positions via self-play:  54%|█████▍    | 269/500 [01:19<01:24,  2.75it/s]Generating positions via self-play:  54%|█████▍    | 270/500 [01:20<01:17,  2.98it/s]Generating positions via self-play:  54%|█████▍    | 271/500 [01:20<01:10,  3.24it/s]Generating positions via self-play:  54%|█████▍    | 272/500 [01:20<01:05,  3.50it/s]Generating positions via self-play:  55%|█████▍    | 273/500 [01:20<01:00,  3.78it/s]Generating positions via self-play:  55%|█████▍    | 274/500 [01:20<00:56,  4.00it/s]Generating positions via self-play:  55%|█████▌    | 275/500 [01:21<00:53,  4.20it/s]Generating positions via self-play:  55%|█████▌    | 276/500 [01:21<00:51,  4.36it/s]Generating positions via self-play:  55%|█████▌    | 277/500 [01:21<00:49,  4.48it/s]Generating positions via self-play:  56%|█████▌    | 278/500 [01:21<00:48,  4.60it/s]Generating positions via self-play:  56%|█████▌    | 279/500 [01:21<00:47,  4.66it/s]Generating positions via self-play:  56%|█████▌    | 280/500 [01:22<00:46,  4.72it/s]Generating positions via self-play:  56%|█████▌    | 281/500 [01:22<00:45,  4.80it/s]Generating positions via self-play:  56%|█████▋    | 282/500 [01:22<00:39,  5.47it/s]Generating positions via self-play:  57%|█████▋    | 283/500 [01:23<02:06,  1.72it/s]Generating positions via self-play:  57%|█████▋    | 284/500 [01:24<01:41,  2.12it/s]Generating positions via self-play:  57%|█████▋    | 285/500 [01:24<01:24,  2.55it/s]Generating positions via self-play:  57%|█████▋    | 286/500 [01:24<01:11,  2.97it/s]Generating positions via self-play:  57%|█████▋    | 287/500 [01:24<01:02,  3.41it/s]Generating positions via self-play:  58%|█████▊    | 288/500 [01:24<00:56,  3.74it/s]Generating positions via self-play:  58%|█████▊    | 289/500 [01:25<00:54,  3.89it/s]Generating positions via self-play:  58%|█████▊    | 290/500 [01:25<00:50,  4.13it/s]Generating positions via self-play:  58%|█████▊    | 291/500 [01:25<00:48,  4.33it/s]Generating positions via self-play:  58%|█████▊    | 292/500 [01:25<00:46,  4.47it/s]Generating positions via self-play:  59%|█████▊    | 293/500 [01:26<00:45,  4.57it/s]Generating positions via self-play:  59%|█████▉    | 294/500 [01:26<00:44,  4.65it/s]Generating positions via self-play:  59%|█████▉    | 295/500 [01:26<00:43,  4.73it/s]Generating positions via self-play:  59%|█████▉    | 296/500 [01:26<00:42,  4.80it/s]Generating positions via self-play:  59%|█████▉    | 297/500 [01:28<02:22,  1.43it/s]Generating positions via self-play:  60%|█████▉    | 298/500 [01:28<01:51,  1.81it/s]Generating positions via self-play:  60%|█████▉    | 299/500 [01:28<01:30,  2.23it/s]Generating positions via self-play:  60%|██████    | 300/500 [01:29<01:15,  2.66it/s]Generating positions via self-play:  60%|██████    | 301/500 [01:29<01:04,  3.09it/s]Generating positions via self-play:  60%|██████    | 302/500 [01:29<00:57,  3.47it/s]Generating positions via self-play:  61%|██████    | 303/500 [01:29<00:51,  3.79it/s]Generating positions via self-play:  61%|██████    | 304/500 [01:29<00:48,  4.06it/s]Generating positions via self-play:  61%|██████    | 305/500 [01:30<00:45,  4.25it/s]Generating positions via self-play:  61%|██████    | 306/500 [01:30<00:43,  4.42it/s]Generating positions via self-play:  61%|██████▏   | 307/500 [01:30<00:42,  4.54it/s]Generating positions via self-play:  62%|██████▏   | 308/500 [01:30<00:41,  4.63it/s]Generating positions via self-play:  62%|██████▏   | 309/500 [01:30<00:40,  4.72it/s]Generating positions via self-play:  62%|██████▏   | 310/500 [01:31<00:39,  4.87it/s]Generating positions via self-play:  62%|██████▏   | 311/500 [01:32<02:02,  1.54it/s]Generating positions via self-play:  62%|██████▏   | 312/500 [01:33<01:37,  1.93it/s]Generating positions via self-play:  63%|██████▎   | 313/500 [01:33<01:18,  2.38it/s]Generating positions via self-play:  63%|██████▎   | 314/500 [01:33<01:02,  2.96it/s]Generating positions via self-play:  63%|██████▎   | 315/500 [01:33<00:50,  3.67it/s]Generating positions via self-play:  63%|██████▎   | 316/500 [01:35<02:08,  1.43it/s]Generating positions via self-play:  63%|██████▎   | 317/500 [01:35<01:41,  1.81it/s]Generating positions via self-play:  64%|██████▎   | 318/500 [01:35<01:21,  2.23it/s]Generating positions via self-play:  64%|██████▍   | 319/500 [01:35<01:08,  2.66it/s]Generating positions via self-play:  64%|██████▍   | 320/500 [01:36<00:58,  3.07it/s]Generating positions via self-play:  64%|██████▍   | 321/500 [01:36<00:51,  3.44it/s]Generating positions via self-play:  64%|██████▍   | 322/500 [01:36<00:47,  3.78it/s]Generating positions via self-play:  65%|██████▍   | 323/500 [01:36<00:43,  4.06it/s]Generating positions via self-play:  65%|██████▍   | 324/500 [01:36<00:40,  4.31it/s]Generating positions via self-play:  65%|██████▌   | 325/500 [01:37<00:39,  4.45it/s]Generating positions via self-play:  65%|██████▌   | 326/500 [01:37<00:37,  4.65it/s]Generating positions via self-play:  65%|██████▌   | 327/500 [01:37<00:36,  4.71it/s]Generating positions via self-play:  66%|██████▌   | 328/500 [01:37<00:36,  4.75it/s]Generating positions via self-play:  66%|██████▌   | 329/500 [01:37<00:35,  4.78it/s]Generating positions via self-play:  66%|██████▌   | 330/500 [01:39<01:59,  1.42it/s]Generating positions via self-play:  66%|██████▌   | 331/500 [01:39<01:33,  1.80it/s]Generating positions via self-play:  66%|██████▋   | 332/500 [01:40<01:15,  2.23it/s]Generating positions via self-play:  67%|██████▋   | 333/500 [01:40<01:02,  2.66it/s]Generating positions via self-play:  67%|██████▋   | 334/500 [01:40<00:54,  3.07it/s]Generating positions via self-play:  67%|██████▋   | 335/500 [01:40<00:47,  3.45it/s]Generating positions via self-play:  67%|██████▋   | 336/500 [01:40<00:43,  3.77it/s]Generating positions via self-play:  67%|██████▋   | 337/500 [01:41<00:40,  4.05it/s]Generating positions via self-play:  68%|██████▊   | 338/500 [01:41<00:38,  4.26it/s]Generating positions via self-play:  68%|██████▊   | 339/500 [01:41<00:36,  4.42it/s]Generating positions via self-play:  68%|██████▊   | 340/500 [01:41<00:34,  4.58it/s]Generating positions via self-play:  68%|██████▊   | 341/500 [01:41<00:34,  4.66it/s]Generating positions via self-play:  68%|██████▊   | 342/500 [01:42<00:32,  4.81it/s]Generating positions via self-play:  69%|██████▊   | 343/500 [01:42<00:32,  4.84it/s]Generating positions via self-play:  69%|██████▉   | 344/500 [01:44<01:48,  1.44it/s]Generating positions via self-play:  69%|██████▉   | 345/500 [01:44<01:24,  1.82it/s]Generating positions via self-play:  69%|██████▉   | 346/500 [01:44<01:08,  2.24it/s]Generating positions via self-play:  69%|██████▉   | 347/500 [01:44<00:57,  2.68it/s]Generating positions via self-play:  70%|██████▉   | 348/500 [01:45<00:49,  3.09it/s]Generating positions via self-play:  70%|██████▉   | 349/500 [01:45<00:44,  3.37it/s]Generating positions via self-play:  70%|███████   | 350/500 [01:45<00:40,  3.72it/s]Generating positions via self-play:  70%|███████   | 351/500 [01:45<00:37,  4.00it/s]Generating positions via self-play:  70%|███████   | 352/500 [01:45<00:35,  4.22it/s]Generating positions via self-play:  71%|███████   | 353/500 [01:46<00:32,  4.53it/s]Generating positions via self-play:  71%|███████   | 354/500 [01:46<00:31,  4.63it/s]Generating positions via self-play:  71%|███████   | 355/500 [01:46<00:30,  4.72it/s]Generating positions via self-play:  71%|███████   | 356/500 [01:46<00:30,  4.79it/s]Generating positions via self-play:  71%|███████▏  | 357/500 [01:46<00:29,  4.87it/s]Generating positions via self-play:  72%|███████▏  | 358/500 [01:48<01:39,  1.43it/s]Generating positions via self-play:  72%|███████▏  | 359/500 [01:48<01:17,  1.81it/s]Generating positions via self-play:  72%|███████▏  | 360/500 [01:49<01:02,  2.23it/s]Generating positions via self-play:  72%|███████▏  | 361/500 [01:49<00:52,  2.66it/s]Generating positions via self-play:  72%|███████▏  | 362/500 [01:49<00:44,  3.07it/s]Generating positions via self-play:  73%|███████▎  | 363/500 [01:49<00:39,  3.45it/s]Generating positions via self-play:  73%|███████▎  | 364/500 [01:49<00:36,  3.77it/s]Generating positions via self-play:  73%|███████▎  | 365/500 [01:50<00:33,  4.04it/s]Generating positions via self-play:  73%|███████▎  | 366/500 [01:50<00:31,  4.25it/s]Generating positions via self-play:  73%|███████▎  | 367/500 [01:50<00:30,  4.42it/s]Generating positions via self-play:  74%|███████▎  | 368/500 [01:50<00:28,  4.59it/s]Generating positions via self-play:  74%|███████▍  | 369/500 [01:50<00:27,  4.79it/s]Generating positions via self-play:  74%|███████▍  | 370/500 [01:51<00:26,  4.91it/s]Generating positions via self-play:  74%|███████▍  | 371/500 [01:51<00:25,  5.12it/s]Generating positions via self-play:  74%|███████▍  | 372/500 [01:53<01:28,  1.44it/s]Generating positions via self-play:  75%|███████▍  | 373/500 [01:53<01:09,  1.82it/s]Generating positions via self-play:  75%|███████▍  | 374/500 [01:53<00:56,  2.24it/s]Generating positions via self-play:  75%|███████▌  | 375/500 [01:53<00:46,  2.67it/s]Generating positions via self-play:  75%|███████▌  | 376/500 [01:54<00:40,  3.08it/s]Generating positions via self-play:  75%|███████▌  | 377/500 [01:54<00:35,  3.49it/s]Generating positions via self-play:  76%|███████▌  | 378/500 [01:54<00:32,  3.80it/s]Generating positions via self-play:  76%|███████▌  | 379/500 [01:54<00:29,  4.07it/s]Generating positions via self-play:  76%|███████▌  | 380/500 [01:54<00:28,  4.27it/s]Generating positions via self-play:  76%|███████▌  | 381/500 [01:55<00:26,  4.43it/s]Generating positions via self-play:  76%|███████▋  | 382/500 [01:55<00:25,  4.69it/s]Generating positions via self-play:  77%|███████▋  | 383/500 [01:55<00:24,  4.77it/s]Generating positions via self-play:  77%|███████▋  | 384/500 [01:55<00:23,  4.87it/s]Generating positions via self-play:  77%|███████▋  | 385/500 [01:55<00:23,  4.94it/s]Generating positions via self-play:  77%|███████▋  | 386/500 [01:57<01:17,  1.47it/s]Generating positions via self-play:  77%|███████▋  | 387/500 [01:57<01:00,  1.86it/s]Generating positions via self-play:  78%|███████▊  | 388/500 [01:58<00:48,  2.29it/s]Generating positions via self-play:  78%|███████▊  | 389/500 [01:58<00:40,  2.71it/s]Generating positions via self-play:  78%|███████▊  | 390/500 [01:58<00:35,  3.13it/s]Generating positions via self-play:  78%|███████▊  | 391/500 [01:58<00:31,  3.50it/s]Generating positions via self-play:  78%|███████▊  | 392/500 [01:58<00:28,  3.83it/s]Generating positions via self-play:  79%|███████▊  | 393/500 [01:59<00:26,  4.09it/s]Generating positions via self-play:  79%|███████▉  | 395/500 [01:59<00:19,  5.35it/s]Generating positions via self-play:  79%|███████▉  | 396/500 [01:59<00:19,  5.24it/s]Generating positions via self-play:  79%|███████▉  | 397/500 [01:59<00:19,  5.16it/s]Generating positions via self-play:  80%|███████▉  | 398/500 [01:59<00:19,  5.24it/s]Generating positions via self-play:  80%|███████▉  | 399/500 [02:00<00:18,  5.38it/s]Generating positions via self-play:  80%|████████  | 400/500 [02:01<01:01,  1.63it/s]Generating positions via self-play:  80%|████████  | 401/500 [02:01<00:49,  2.02it/s]Generating positions via self-play:  80%|████████  | 402/500 [02:02<00:40,  2.43it/s]Generating positions via self-play:  81%|████████  | 403/500 [02:02<00:33,  2.85it/s]Generating positions via self-play:  81%|████████  | 404/500 [02:02<00:29,  3.25it/s]Generating positions via self-play:  81%|████████  | 405/500 [02:02<00:26,  3.60it/s]Generating positions via self-play:  81%|████████  | 406/500 [02:02<00:24,  3.90it/s]Generating positions via self-play:  81%|████████▏ | 407/500 [02:03<00:22,  4.14it/s]Generating positions via self-play:  82%|████████▏ | 408/500 [02:03<00:21,  4.33it/s]Generating positions via self-play:  82%|████████▏ | 409/500 [02:03<00:20,  4.47it/s]Generating positions via self-play:  82%|████████▏ | 410/500 [02:03<00:19,  4.57it/s]Generating positions via self-play:  82%|████████▏ | 411/500 [02:04<00:19,  4.67it/s]Generating positions via self-play:  82%|████████▏ | 412/500 [02:04<00:18,  4.73it/s]Generating positions via self-play:  83%|████████▎ | 413/500 [02:04<00:18,  4.78it/s]Generating positions via self-play:  83%|████████▎ | 414/500 [02:06<01:01,  1.39it/s]Generating positions via self-play:  83%|████████▎ | 415/500 [02:06<00:48,  1.77it/s]Generating positions via self-play:  83%|████████▎ | 416/500 [02:06<00:38,  2.18it/s]Generating positions via self-play:  83%|████████▎ | 417/500 [02:06<00:31,  2.60it/s]Generating positions via self-play:  84%|████████▎ | 418/500 [02:07<00:27,  3.02it/s]Generating positions via self-play:  84%|████████▍ | 419/500 [02:07<00:23,  3.40it/s]Generating positions via self-play:  84%|████████▍ | 420/500 [02:07<00:21,  3.73it/s]Generating positions via self-play:  84%|████████▍ | 421/500 [02:07<00:19,  4.01it/s]Generating positions via self-play:  84%|████████▍ | 422/500 [02:07<00:18,  4.28it/s]Generating positions via self-play:  85%|████████▍ | 423/500 [02:08<00:16,  4.55it/s]Generating positions via self-play:  85%|████████▌ | 425/500 [02:08<00:12,  6.22it/s]Generating positions via self-play:  85%|████████▌ | 426/500 [02:08<00:12,  5.80it/s]Generating positions via self-play:  85%|████████▌ | 427/500 [02:08<00:12,  5.79it/s]Generating positions via self-play:  86%|████████▌ | 428/500 [02:11<00:57,  1.26it/s]Generating positions via self-play:  86%|████████▌ | 429/500 [02:11<00:44,  1.59it/s]Generating positions via self-play:  86%|████████▌ | 430/500 [02:11<00:35,  1.97it/s]Generating positions via self-play:  86%|████████▌ | 431/500 [02:11<00:28,  2.38it/s]Generating positions via self-play:  86%|████████▋ | 432/500 [02:12<00:24,  2.83it/s]Generating positions via self-play:  87%|████████▋ | 433/500 [02:12<00:20,  3.23it/s]Generating positions via self-play:  87%|████████▋ | 434/500 [02:12<00:18,  3.62it/s]Generating positions via self-play:  87%|████████▋ | 435/500 [02:12<00:16,  3.96it/s]Generating positions via self-play:  87%|████████▋ | 436/500 [02:12<00:14,  4.31it/s]Generating positions via self-play:  87%|████████▋ | 437/500 [02:12<00:13,  4.70it/s]Generating positions via self-play:  88%|████████▊ | 438/500 [02:13<00:12,  4.84it/s]Generating positions via self-play:  88%|████████▊ | 439/500 [02:13<00:12,  5.05it/s]Generating positions via self-play:  88%|████████▊ | 440/500 [02:13<00:11,  5.12it/s]Generating positions via self-play:  88%|████████▊ | 441/500 [02:13<00:11,  5.34it/s]Generating positions via self-play:  88%|████████▊ | 442/500 [02:15<00:39,  1.46it/s]Generating positions via self-play:  89%|████████▊ | 443/500 [02:17<01:01,  1.08s/it]Generating positions via self-play:  89%|████████▉ | 444/500 [02:17<00:45,  1.22it/s]Generating positions via self-play:  89%|████████▉ | 445/500 [02:17<00:34,  1.57it/s]Generating positions via self-play:  89%|████████▉ | 446/500 [02:18<00:27,  1.98it/s]Generating positions via self-play:  89%|████████▉ | 447/500 [02:18<00:21,  2.42it/s]Generating positions via self-play:  90%|████████▉ | 448/500 [02:18<00:17,  2.90it/s]Generating positions via self-play:  90%|████████▉ | 449/500 [02:18<00:15,  3.33it/s]Generating positions via self-play:  90%|█████████ | 450/500 [02:20<00:38,  1.29it/s]Generating positions via self-play:  90%|█████████ | 451/500 [02:20<00:29,  1.65it/s]Generating positions via self-play:  90%|█████████ | 452/500 [02:21<00:23,  2.06it/s]Generating positions via self-play:  91%|█████████ | 453/500 [02:21<00:18,  2.48it/s]Generating positions via self-play:  91%|█████████ | 454/500 [02:21<00:15,  2.91it/s]Generating positions via self-play:  91%|█████████ | 455/500 [02:21<00:13,  3.33it/s]Generating positions via self-play:  91%|█████████ | 456/500 [02:21<00:11,  3.67it/s]Generating positions via self-play:  91%|█████████▏| 457/500 [02:21<00:09,  4.47it/s]Generating positions via self-play:  92%|█████████▏| 458/500 [02:23<00:32,  1.31it/s]Generating positions via self-play:  92%|█████████▏| 459/500 [02:24<00:24,  1.68it/s]Generating positions via self-play:  92%|█████████▏| 460/500 [02:24<00:19,  2.10it/s]Generating positions via self-play:  92%|█████████▏| 461/500 [02:24<00:15,  2.53it/s]Generating positions via self-play:  92%|█████████▏| 462/500 [02:24<00:12,  2.95it/s]Generating positions via self-play:  93%|█████████▎| 463/500 [02:25<00:10,  3.36it/s]Generating positions via self-play:  93%|█████████▎| 464/500 [02:25<00:09,  3.76it/s]Generating positions via self-play:  93%|█████████▎| 465/500 [02:25<00:08,  4.08it/s]Generating positions via self-play:  93%|█████████▎| 467/500 [02:25<00:06,  5.41it/s]Generating positions via self-play:  94%|█████████▎| 468/500 [02:25<00:06,  5.27it/s]Generating positions via self-play:  94%|█████████▍| 469/500 [02:26<00:05,  5.21it/s]Generating positions via self-play:  94%|█████████▍| 470/500 [02:26<00:06,  4.94it/s]Generating positions via self-play:  94%|█████████▍| 471/500 [02:26<00:05,  5.58it/s]Generating positions via self-play:  94%|█████████▍| 472/500 [02:28<00:18,  1.55it/s]Generating positions via self-play:  95%|█████████▍| 473/500 [02:28<00:13,  1.97it/s]Generating positions via self-play:  95%|█████████▌| 475/500 [02:28<00:07,  3.20it/s]Generating positions via self-play:  95%|█████████▌| 476/500 [02:28<00:06,  3.73it/s]Generating positions via self-play:  95%|█████████▌| 477/500 [02:30<00:15,  1.45it/s]Generating positions via self-play:  96%|█████████▌| 478/500 [02:30<00:12,  1.79it/s]Generating positions via self-play:  96%|█████████▌| 479/500 [02:30<00:09,  2.17it/s]Generating positions via self-play:  96%|█████████▌| 480/500 [02:31<00:07,  2.57it/s]Generating positions via self-play:  96%|█████████▌| 481/500 [02:31<00:06,  2.97it/s]Generating positions via self-play:  96%|█████████▋| 482/500 [02:31<00:05,  3.35it/s]Generating positions via self-play:  97%|█████████▋| 483/500 [02:31<00:04,  3.68it/s]Generating positions via self-play:  97%|█████████▋| 484/500 [02:31<00:04,  3.96it/s]Generating positions via self-play:  97%|█████████▋| 485/500 [02:32<00:03,  4.18it/s]Generating positions via self-play:  97%|█████████▋| 486/500 [02:32<00:03,  4.42it/s]Generating positions via self-play:  97%|█████████▋| 487/500 [02:32<00:02,  4.58it/s]Generating positions via self-play:  98%|█████████▊| 488/500 [02:32<00:02,  4.65it/s]Generating positions via self-play:  98%|█████████▊| 489/500 [02:32<00:02,  4.83it/s]Generating positions via self-play:  98%|█████████▊| 490/500 [02:33<00:02,  4.84it/s]Generating positions via self-play:  98%|█████████▊| 491/500 [02:35<00:06,  1.42it/s]Generating positions via self-play:  98%|█████████▊| 492/500 [02:35<00:04,  1.80it/s]Generating positions via self-play:  99%|█████████▊| 493/500 [02:35<00:03,  2.22it/s]Generating positions via self-play:  99%|█████████▉| 494/500 [02:35<00:02,  2.65it/s]Generating positions via self-play:  99%|█████████▉| 495/500 [02:35<00:01,  3.07it/s]Generating positions via self-play:  99%|█████████▉| 496/500 [02:36<00:01,  3.45it/s]Generating positions via self-play:  99%|█████████▉| 497/500 [02:36<00:00,  3.77it/s]Generating positions via self-play: 100%|█████████▉| 498/500 [02:36<00:00,  4.04it/s]Generating positions via self-play: 100%|█████████▉| 499/500 [02:36<00:00,  4.26it/s]Generating positions via self-play: 100%|██████████| 500/500 [02:36<00:00,  4.42it/s]Generating positions via self-play: 100%|██████████| 500/500 [02:36<00:00,  4.42it/s, checkpoint=500]Generating positions via self-play: 100%|██████████| 500/500 [02:36<00:00,  3.19it/s, checkpoint=500]
+
+============================================================
+SAMPLE GAME 1
+============================================================
+
+Move 1: Player X plays column 5
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . X .
+
+Move 2: Player O plays column 3
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . O . X .
+
+Move 3: Player X plays column 2
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . X O . X .
+
+Move 4: Player O plays column 3
+Policy: 0.00 0.00 0.01 0.82 0.00 0.17 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . O . . .
+  . . X O . X .
+
+Move 5: Player X plays column 3
+Policy: 0.00 0.00 0.00 1.00 0.00 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  . . X O . X .
+
+Move 6: Player O plays column 3
+Policy: 0.00 0.01 0.00 0.33 0.00 0.67 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . O . . .
+  . . . X . . .
+  . . . O . . .
+  . . X O . X .
+
+Move 7: Player X plays column 3
+Policy: 0.00 0.00 0.00 1.00 0.00 0.00 0.00
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  . . . X . . .
+  . . . O . . .
+  . . X O . X .
+
+Move 8: Player O plays column 2
+Policy: 0.00 0.01 0.43 0.00 0.00 0.56 0.00
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  . . . X . . .
+  . . O O . . .
+  . . X O . X .
+
+Move 9: Player X plays column 5
+Policy: 0.00 0.00 0.43 0.00 0.00 0.57 0.00
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  . . . X . . .
+  . . O O . X .
+  . . X O . X .
+
+Move 10: Player O plays column 2
+Policy: 0.00 0.00 0.99 0.00 0.00 0.01 0.00
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  . . O X . . .
+  . . O O . X .
+  . . X O . X .
+
+Game ended: WIN after 23 moves
+Saved positions from moves 12-23
+Move sequence: 643444436336664...
+
+============================================================
+SAMPLE GAME 2
+============================================================
+
+Move 1: Player X plays column 3
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+
+Move 2: Player O plays column 5
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . O .
+
+Move 3: Player X plays column 4
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X X O .
+
+Move 4: Player O plays column 1
+Policy: 0.00 0.96 0.03 0.00 0.01 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . O . X X O .
+
+Move 5: Player X plays column 1
+Policy: 0.00 0.78 0.00 0.20 0.02 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . X . . . . .
+  . O . X X O .
+
+Move 6: Player O plays column 3
+Policy: 0.00 0.01 0.00 0.05 0.94 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . X . O . . .
+  . O . X X O .
+
+Move 7: Player X plays column 3
+Policy: 0.00 0.00 0.00 1.00 0.00 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+  . X . O . . .
+  . O . X X O .
+
+Move 8: Player O plays column 5
+Policy: 0.00 0.00 0.00 0.11 0.00 0.89 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+  . X . O . O .
+  . O . X X O .
+
+Move 9: Player X plays column 1
+Policy: 0.00 0.52 0.00 0.18 0.00 0.30 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . X . X . . .
+  . X . O . O .
+  . O . X X O .
+
+Move 10: Player O plays column 0
+Policy: 0.70 0.17 0.00 0.11 0.00 0.02 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . X . X . . .
+  . X . O . O .
+  O O . X X O .
+
+Game ended: DRAW after 25 moves
+Saved positions from moves 12-25
+Move sequence: 465224462122446...
+
+============================================================
+SAMPLE GAME 3
+============================================================
+
+Move 1: Player X plays column 0
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  X . . . . . .
+
+Move 2: Player O plays column 2
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  X . O . . . .
+
+Move 3: Player X plays column 6
+Policy: 0.14 0.14 0.14 0.14 0.14 0.14 0.14
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  X . O . . . X
+
+Move 4: Player O plays column 4
+Policy: 0.01 0.00 0.01 0.01 0.68 0.09 0.20
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  X . O . O . X
+
+Move 5: Player X plays column 3
+Policy: 0.00 0.00 0.00 1.00 0.00 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  X . O X O . X
+
+Move 6: Player O plays column 3
+Policy: 0.00 0.00 0.02 0.91 0.00 0.00 0.08
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . O . . .
+  X . O X O . X
+
+Move 7: Player X plays column 3
+Policy: 0.00 0.00 0.00 0.98 0.02 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+  . . . O . . .
+  X . O X O . X
+
+Move 8: Player O plays column 4
+Policy: 0.00 0.00 0.00 0.00 0.78 0.00 0.21
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X . . .
+  . . . O O . .
+  X . O X O . X
+
+Move 9: Player X plays column 4
+Policy: 0.00 0.00 0.03 0.06 0.91 0.00 0.00
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X X . .
+  . . . O O . .
+  X . O X O . X
+
+Move 10: Player O plays column 2
+Policy: 0.01 0.00 0.19 0.01 0.61 0.00 0.18
+  . . . . . . .
+  . . . . . . .
+  . . . . . . .
+  . . . X X . .
+  . . O O O . .
+  X . O X O . X
+
+Game ended: DRAW after 25 moves
+Saved positions from moves 12-25
+Move sequence: 137544455331443...
+
+✓ Generated 500 positions from 41 self-play games
+✓ Average 12.2 positions per game
+✓ Cleaned up checkpoint file
+
+======================================================================
+POSITION GENERATION COMPLETE
+======================================================================
+✓ Saved 500 positions to data/selfplay_500_diverse.npz
+
+Next step: Label with solver
+Command: python training/scripts/label_dataset.py \
+         --input data/selfplay_500_diverse.npz \
+         --output data/selfplay_500_diverse_labeled.npz \
+         --workers 6

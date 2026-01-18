@@ -1,0 +1,43 @@
+Loading positions from data/selfplay_positions_2k.npz...
+Labeling 100 positions with 6 workers...
+Estimated time: 0.1 hours
+(Solver used OFFLINE only - runtime engine won't call solver!)
+
+Labeling positions:   0%|          | 0/100 [00:00<?, ?it/s]Labeling positions:   1%|          | 1/100 [00:01<03:01,  1.83s/it]Labeling positions:   2%|▏         | 2/100 [00:54<51:41, 31.64s/it]Labeling positions:   4%|▍         | 4/100 [00:54<19:00, 11.88s/it]Labeling positions:  83%|████████▎ | 83/100 [00:55<00:05,  2.99it/s]Labeling positions:  89%|████████▉ | 89/100 [00:55<00:03,  3.22it/s]Labeling positions:  93%|█████████▎| 93/100 [01:02<00:02,  2.37it/s]Labeling positions:  96%|█████████▌| 96/100 [01:02<00:01,  2.48it/s]Labeling positions: 100%|██████████| 100/100 [01:02<00:00,  1.59it/s]
+Warning: Failed to solve position 41: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 45: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 49: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 33: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 35: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 37: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 39: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 43: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 47: Solver error: Could not parse solver output: 
+Warning: Failed to solve position 51: Solver error: Could not parse solver output: 
+
+Saving labeled dataset to data/selfplay_labeled_2k.npz...
+
+============================================================
+LABELING COMPLETE
+============================================================
+Total positions: 100
+Successfully labeled: 90
+Errors: 10
+Time elapsed: 1.0 minutes
+Throughput: 5721 positions/hour
+
+WDL Distribution:
+  Wins:   12 (12.0%)
+  Draws:  26 (26.0%)
+  Losses: 62 (62.0%)
+
+Labeled dataset saved to: data/selfplay_labeled_2k.npz
+File size: 0.0 MB
+
+Warning: 10 positions failed to label
+First few errors:
+  Position 33: Solver error: Could not parse solver output: 
+  Position 35: Solver error: Could not parse solver output: 
+  Position 37: Solver error: Could not parse solver output: 
+  Position 39: Solver error: Could not parse solver output: 
+  Position 41: Solver error: Could not parse solver output: 

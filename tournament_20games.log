@@ -1,0 +1,85 @@
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+======================================================================
+               ALPHA-BETA (WDL) vs MCTS TOURNAMENT
+======================================================================
+
+Device: cuda
+
+Loading Alpha-Beta engine with WDL evaluator...
+Loading WDL model from checkpoints/connect4/model_wdl_best.pt...
+✓ Loaded WDL model (ResNet-20, 256 hidden) on cuda
+✓ Alpha-Beta engine ready
+
+Loading MCTS baseline (model_195.pt)...
+✓ MCTS engine ready
+
+======================================================================
+TACTICAL PUZZLES: Alpha-Beta
+======================================================================
+  ✓ Puzzle 1 (Win in 1): Correct (col 3)
+  ✓ Puzzle 2 (Block): Correct (col 0)
+  ✓ Puzzle 3 (Win in 1 v2): Correct (col 2)
+
+Tactical Accuracy: 3/3 (100.0%)
+
+======================================================================
+TACTICAL PUZZLES: MCTS
+======================================================================
+  ✓ Puzzle 1 (Win in 1): Correct (col 3)
+  ✓ Puzzle 2 (Block): Correct (col 0)
+  ✓ Puzzle 3 (Win in 1 v2): Correct (col 2)
+
+Tactical Accuracy: 3/3 (100.0%)
+
+======================================================================
+STARTING TOURNAMENT: 20 games, 1000ms/move
+======================================================================
+
+Game 1/20 (Alpha-Beta starts)... MCTS wins!
+Game 2/20 (Alpha-Beta starts)... MCTS wins!
+Game 3/20 (Alpha-Beta starts)... MCTS wins!
+Game 4/20 (Alpha-Beta starts)... MCTS wins!
+Game 5/20 (Alpha-Beta starts)... MCTS wins!
+Game 6/20 (Alpha-Beta starts)... MCTS wins!
+Game 7/20 (Alpha-Beta starts)... MCTS wins!
+Game 8/20 (Alpha-Beta starts)... MCTS wins!
+Game 9/20 (Alpha-Beta starts)... MCTS wins!
+Game 10/20 (Alpha-Beta starts)... MCTS wins!
+Game 11/20 (MCTS starts)... MCTS wins!
+Game 12/20 (MCTS starts)... MCTS wins!
+Game 13/20 (MCTS starts)... MCTS wins!
+Game 14/20 (MCTS starts)... MCTS wins!
+Game 15/20 (MCTS starts)... MCTS wins!
+Game 16/20 (MCTS starts)... MCTS wins!
+Game 17/20 (MCTS starts)... MCTS wins!
+Game 18/20 (MCTS starts)... MCTS wins!
+Game 19/20 (MCTS starts)... MCTS wins!
+Game 20/20 (MCTS starts)... MCTS wins!
+
+======================================================================
+                         FINAL RESULTS
+======================================================================
+
+Game Results:
+  Alpha-Beta:  0 wins, 0 draws, 20 losses
+  MCTS:        20 wins, 0 draws, 0 losses
+  Win Rate:    AB=0.0%, MCTS=100.0%
+
+Tactical Accuracy:
+  Alpha-Beta:  3/3 (100.0%)
+  MCTS:        3/3 (100.0%)
+
+Performance:
+  Avg game length: 15.3 moves
+  AB avg time/move: 505.3ms
+  MCTS avg time/move: 349.7ms
+
+======================================================================
+TOURNAMENT COMPLETE
+======================================================================
+

@@ -1,0 +1,157 @@
+nohup: ignoring input
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+============================================================
+AlphaZero Light - Connect Four (4-in-a-Row) Training
+============================================================
+🚀 GPU Detected: NVIDIA GeForce RTX 5080
+💾 VRAM: 15.44 GB
+Device: cuda
+Board: 6x7, Win Length: 4
+
+✨ Teacher-Solver mode enabled!
+Training Configuration:
+  Iterations: 350
+  Self-play games per iteration: 150
+  Training epochs: 90
+  Batch size: 1024
+  MCTS searches: 400
+  Evaluation frequency: every 10 iterations
+
+🔄 Found existing training history at checkpoints/connect4/training_history.json
+📥 Resuming from iteration 196...
+✅ Model and Optimizer state loaded.
+Overall Progress:  56%|████████████████████████████▌                      | 196/350 [00:00<?, ?it/s]
+============================================================
+📍 Iteration 197/350
+============================================================
+🎮 MAIN: 97% self-play, 1.5% aggressive, 1.5% heuristic
+   - 150 games
+   - Model randomly plays as Player 1 or -1 (50/50)
+   - MCTS searches: 400
+   - Training epochs: 120
+   - Temperature: 0.75
+   - Phase: main
+   - Teacher-Solver mode: ENABLED
+   - Solver schedule: target ≥80% usage mid/late game
+
+Self-play:   0%|                                        | 0/150 [00:00<?, ?it/s][A
+Self-play:   1%|▏                             | 1/150 [00:53<2:12:57, 53.54s/it][A
+Self-play:   1%|▍                             | 2/150 [02:40<3:30:05, 85.17s/it][A
+Self-play:   2%|▌                             | 3/150 [02:50<2:04:14, 50.71s/it][A
+Self-play:   3%|▊                             | 4/150 [04:01<2:22:37, 58.61s/it][A
+Self-play:   3%|█                             | 5/150 [04:04<1:33:09, 38.55s/it][A
+Self-play:   4%|█▏                            | 6/150 [04:43<1:33:12, 38.84s/it][A⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+
+Self-play:   5%|█▍                            | 7/150 [04:57<1:12:58, 30.62s/it][A
+Self-play:   5%|█▌                            | 8/150 [06:09<1:43:37, 43.79s/it][A
+Self-play:   6%|█▊                            | 9/150 [06:11<1:12:21, 30.79s/it][A
+Self-play:   7%|█▉                           | 10/150 [06:52<1:19:19, 33.99s/it][A
+Self-play:   7%|██▏                          | 11/150 [07:01<1:00:33, 26.14s/it][A
+Self-play:   8%|██▎                          | 12/150 [07:30<1:02:16, 27.08s/it][A
+Self-play:   9%|██▋                            | 13/150 [07:41<51:08, 22.40s/it][A
+Self-play:   9%|██▉                            | 14/150 [08:03<49:58, 22.04s/it][A
+Self-play:  10%|██▉                          | 15/150 [08:50<1:07:06, 29.83s/it][A⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+⚠️ Safe opening failed: Given groups=1, weight of size [256, 3, 3, 3], expected input[1, 1, 6, 7] to have 3 channels, but got 1 channels instead, using MCTS fallback
+
+Self-play:  11%|███▎                           | 16/150 [09:04<55:41, 24.94s/it][A
+Self-play:  11%|███▌                           | 17/150 [09:10<42:37, 19.23s/it][A
+Self-play:  12%|███▋                           | 18/150 [09:17<33:57, 15.43s/it][A
+Self-play:  13%|███▉                           | 19/150 [09:24<28:16, 12.95s/it][A

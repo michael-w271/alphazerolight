@@ -1,0 +1,49 @@
+nohup: ignoring input
+/mnt/ssd2pro/miniforge3/envs/tetrisrl/lib/python3.10/site-packages/torch/cuda/__init__.py:235: UserWarning: 
+NVIDIA GeForce RTX 5080 with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 compute_90.
+If you want to use the NVIDIA GeForce RTX 5080 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+============================================================
+AlphaZero Light - Connect Four (4-in-a-Row) Training
+============================================================
+🚀 GPU Detected: NVIDIA GeForce RTX 5080
+💾 VRAM: 15.44 GB
+Device: cuda
+Board: 6x7, Win Length: 4
+
+✨ Teacher-Solver mode enabled!
+Training Configuration:
+  Iterations: 350
+  Self-play games per iteration: 150
+  Training epochs: 90
+  Batch size: 1024
+  MCTS searches: 50
+  Evaluation frequency: every 10 iterations
+
+🔄 Found existing training history at checkpoints/connect4/training_history.json
+📥 Resuming from iteration 196...
+✅ Model and Optimizer state loaded.
+Overall Progress:  56%|████████████████████████████▌                      | 196/350 [00:00<?, ?it/s]
+============================================================
+📍 Iteration 197/350
+============================================================
+🎮 MAIN: 97% self-play, 1.5% aggressive, 1.5% heuristic
+   - 150 games
+   - Model randomly plays as Player 1 or -1 (50/50)
+   - MCTS searches: 400
+   - Training epochs: 120
+   - Temperature: 0.75
+   - Phase: main
+   - Teacher-Solver mode: ENABLED
+   - Solver schedule: target ≥80% usage mid/late game
+
+Self-play:   0%|                                        | 0/150 [00:00<?, ?it/s][A
+Self-play:   1%|▏                               | 1/150 [00:05<14:39,  5.90s/it][A
+Self-play:   1%|▍                               | 2/150 [00:06<07:25,  3.01s/it][A
+Self-play:   2%|▋                               | 3/150 [00:14<12:33,  5.13s/it][A
+Self-play:   3%|▊                               | 4/150 [00:14<07:58,  3.28s/it][A
+Self-play:   3%|█                               | 5/150 [00:23<12:07,  5.02s/it][A
+Self-play:   4%|█▎                              | 6/150 [00:32<15:26,  6.44s/it][A
+Self-play:   5%|█▍                              | 7/150 [00:47<22:19,  9.37s/it][A

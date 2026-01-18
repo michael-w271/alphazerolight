@@ -1,0 +1,25 @@
+Loading positions from data/selfplay_1k_fixed.npz...
+Labeling 1,000 positions with 6 workers...
+Estimated time: 1.4 hours
+(Solver used OFFLINE only - runtime engine won't call solver!)
+
+Labeling positions:   0%|          | 0/1000 [00:00<?, ?it/s]Labeling positions:   2%|▏         | 15/1000 [00:00<00:13, 73.39it/s]Labeling positions:   5%|▌         | 50/1000 [00:00<00:06, 155.35it/s]Labeling positions:   7%|▋         | 67/1000 [00:00<00:07, 132.67it/s]Labeling positions:   8%|▊         | 85/1000 [00:00<00:07, 120.60it/s]Labeling positions:  11%|█▏        | 114/1000 [00:00<00:05, 161.42it/s]Labeling positions:  13%|█▎        | 133/1000 [00:00<00:05, 147.93it/s]Labeling positions:  15%|█▌        | 150/1000 [00:01<00:12, 67.25it/s] Labeling positions:  22%|██▏       | 222/1000 [00:01<00:05, 148.79it/s]Labeling positions:  25%|██▍       | 248/1000 [00:01<00:04, 154.37it/s]Labeling positions:  27%|██▋       | 272/1000 [00:02<00:06, 116.31it/s]Labeling positions:  33%|███▎      | 327/1000 [00:02<00:03, 177.63it/s]Labeling positions:  36%|███▌      | 356/1000 [00:02<00:05, 108.44it/s]Labeling positions:  41%|████      | 410/1000 [00:02<00:03, 159.16it/s]Labeling positions:  44%|████▍     | 445/1000 [00:03<00:02, 186.53it/s]Labeling positions:  48%|████▊     | 478/1000 [00:03<00:02, 191.06it/s]Labeling positions:  51%|█████     | 507/1000 [00:03<00:02, 180.11it/s]Labeling positions:  53%|█████▎    | 532/1000 [00:03<00:02, 190.26it/s]Labeling positions:  56%|█████▌    | 557/1000 [00:03<00:03, 138.12it/s]Labeling positions:  58%|█████▊    | 577/1000 [00:04<00:03, 121.29it/s]Labeling positions:  63%|██████▎   | 628/1000 [00:04<00:02, 180.48it/s]Labeling positions:  65%|██████▌   | 653/1000 [00:04<00:01, 184.05it/s]Labeling positions:  68%|██████▊   | 677/1000 [00:04<00:01, 166.49it/s]Labeling positions:  70%|██████▉   | 698/1000 [00:04<00:02, 113.16it/s]Labeling positions:  74%|███████▍  | 745/1000 [00:05<00:01, 167.08it/s]Labeling positions:  77%|███████▋  | 770/1000 [00:05<00:01, 172.09it/s]Labeling positions:  80%|███████▉  | 795/1000 [00:05<00:01, 186.94it/s]Labeling positions:  82%|████████▏ | 819/1000 [00:05<00:00, 186.78it/s]Labeling positions:  84%|████████▍ | 842/1000 [00:05<00:00, 187.57it/s]Labeling positions:  86%|████████▋ | 864/1000 [00:05<00:00, 191.11it/s]Labeling positions:  88%|████████▊ | 885/1000 [00:05<00:00, 195.05it/s]Labeling positions:  91%|█████████ | 906/1000 [00:05<00:00, 184.07it/s]Labeling positions:  93%|█████████▎| 929/1000 [00:05<00:00, 192.42it/s]Labeling positions:  95%|█████████▌| 952/1000 [00:06<00:00, 202.11it/s]Labeling positions:  97%|█████████▋| 973/1000 [00:06<00:00, 186.84it/s]Labeling positions:  99%|█████████▉| 993/1000 [00:06<00:00, 174.88it/s]Labeling positions: 100%|██████████| 1000/1000 [00:06<00:00, 157.96it/s]
+
+Saving labeled dataset to data/selfplay_1k_fixed_labeled.npz...
+
+============================================================
+LABELING COMPLETE
+============================================================
+Total positions: 1,000
+Successfully labeled: 1,000
+Errors: 0
+Time elapsed: 0.1 minutes
+Throughput: 566934 positions/hour
+
+WDL Distribution:
+  Wins:   535 (53.5%)
+  Draws:  96 (9.6%)
+  Losses: 369 (36.9%)
+
+Labeled dataset saved to: data/selfplay_1k_fixed_labeled.npz
+File size: 0.0 MB

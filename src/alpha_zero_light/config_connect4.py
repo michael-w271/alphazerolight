@@ -71,12 +71,15 @@ TRAINING_CONFIG = {
     'quick_eval_mcts_searches': 100,     # MCTS searches for puzzles
     'quick_eval_h2h_games_each_side': 5, # 5 games per side (10 total H2H)
     'quick_eval_num_puzzles': 25,        # 25 harder tactical puzzles (2-3 move lookahead)
+    
+    # Teacher-Solver mode (Expert Iteration)
+    'use_teacher_solver': True,          # Enable teacher-solver training (replaces heavy MCTS usage)
 }
 
 # MCTS Configuration
 MCTS_CONFIG = {
     'C': 2.0,                           
-    'num_searches': 400,                # MAXIMUM: 400 searches for tournament-level play
+    'num_searches': 50,  # Reduced for teacher-solver (was 400)
     'dirichlet_alpha': 0.3,             # Exploration noise (lower = more concentrated)
     'dirichlet_epsilon': 0.25,          # Fraction of noise to add to root
     'mcts_batch_size': 1,               # Keep at 1 for tactical depth
@@ -93,6 +96,53 @@ MODEL_CONFIG = {
         {'until_iteration': 300, 'lr': 0.0001},
     ],
     'weight_decay': 0.0001,             
+}
+
+# Teacher-Solver Configuration - Expert Iteration with Solver
+TEACHER_SOLVER_CONFIG = {
+    'enabled': True,                    # Enable teacher-solver training
+    'solver_path': None,                # Auto-detect at solvers/connect4/c4solver
+    'cache_size': 100000,               # LRU cache size for solver results
+    
+    # Forced-win override: always use solver when win is imminent
+    'force_win_override': {
+        'enabled': True,
+        'dtw_threshold_plies': 8,       # Distance-to-win threshold (use solver if winning in ≤8 moves)
+        'solver_timeout_ms': 2000,      # 2 second timeout for forced-win queries
+    },
+    
+    # Solver probability schedule by ply (number of pieces on board)
+    # Opening: MCTS (plies 0-15), then Solver dominates (16+)
+    'solver_schedule': [
+        {'ply_range': [0, 15], 'prob': 0.00},   # Opening: 100-search MCTS (fast, high→low temp)
+        {'ply_range': [16, 20], 'prob': 0.70},  # Early-mid: solver starts
+        {'ply_range': [21, 26], 'prob': 0.90},  # Mid-game: solver dominates
+        {'ply_range': [27, 35], 'prob': 0.97},  # Late-game: heavy solver
+        {'ply_range': [36, 42], 'prob': 0.99},  # End-game: almost always solver
+    ],
+    'min_solver_usage_target': 0.80,    # Aim for ≥80% solver usage overall
+    
+    # Safe opening randomization (plies 0-4)
+    # High-temperature NN sampling with safety filter to avoid immediate blunders
+    'opening_randomization': {
+        'enabled': True,
+        'max_opening_plies': 4,         # Apply to first 0-4 plies
+        'temperature': 1.8,             # High temperature for diversity
+        'top_k': 4,                     # Only sample from top-4 NN moves
+        'safety_filter': {
+            'type': 'one_ply_opponent_win_block',
+            'enabled': True,
+            'fallback_temperature': 1.0, # Reduce temp if all moves rejected
+        },
+    },
+    
+    # MCTS minimal fallback (rare usage when solver times out)
+    'mcts_fallback': {
+        'enabled': True,
+        'searches': 16,                 # Tiny MCTS search (vs 400 in baseline)
+        'entropy_threshold': 0.9,       # Use MCTS if NN policy entropy > 0.9 (very uncertain)
+        'only_on_solver_timeout': True, # Only use MCTS if solver failed AND NN uncertain
+    },
 }
 
 # Opponent Mix Configuration - Probabilistic opponent sampling

@@ -13,6 +13,8 @@ import time
 from datetime import datetime
 from alpha_zero_light.training.heuristic_opponent import HeuristicOpponent
 from alpha_zero_light.training.tactical_trainer import TacticalTrainer
+from alpha_zero_light.training.teacher_solver import TeacherSolver
+from alpha_zero_light.training.opening_randomization import safe_opening_move, compute_policy_entropy
 
 
 def _worker_self_play_games(args):
@@ -172,6 +174,13 @@ class AlphaZeroTrainer:
         self.evaluator = evaluator
         self.heuristic_opponent = HeuristicOpponent(game)
         self.tactical_trainer = TacticalTrainer(game)
+        
+        # Initialize teacher-solver if enabled
+        self.teacher_solver = None
+        if args.get('use_teacher_solver', False):
+            from alpha_zero_light.config_connect4 import TEACHER_SOLVER_CONFIG
+            self.teacher_solver = TeacherSolver(game, TEACHER_SOLVER_CONFIG)
+            print("\u2728 Teacher-Solver mode enabled!")
         
         # Training history
         self.history = {
@@ -383,6 +392,66 @@ class AlphaZeroTrainer:
                 # In self-play, both players are the model, so track from player 1's perspective
                 model_outcome = value if player == 1 else self.game.get_opponent_value(value)
                 return return_memory, model_outcome
+            
+            player = self.game.get_opponent(player)
+    
+    def self_play_teacher_guided(self, temperature=None):
+        """
+        Self-play using teacher-solver guidance instead of heavy MCTS.
+        
+        Uses solver for mid/late game moves, NN for early game.
+        Returns memory, outcome, and move source statistics.
+        """
+        if self.teacher_solver is None:
+            # Fallback if teacher disabled
+            mem, outcome = self.self_play(temperature)
+            return mem, outcome, []
+        
+        memory = []
+        player = 1
+        state = self.game.get_initial_state()
+        
+        if temperature is None:
+            temperature = self.args.get('temperature', 1.0)
+        
+        move_sources = []
+        
+        while True:
+            ply = int(np.sum(np.abs(state)))
+            neutral_state = self.game.change_perspective(state, player)
+            
+            # Query teacher for policy
+            pi, v_target, meta = self.teacher_solver.query_teacher(
+                state=state,
+                player=player,
+                ply=ply,
+                model=self.model,
+                mcts=self.mcts  # Pass MCTS for opening fallback
+            )
+            
+            move_sources.append(meta.get('source', 'unknown'))
+            memory.append((neutral_state, pi, player))
+            
+            # Sample action
+            temperature_pi = pi ** (1 / temperature)
+            temperature_pi /= np.sum(temperature_pi) if np.sum(temperature_pi) > 0 else 1.0
+            action = np.random.choice(self.game.action_size, p=temperature_pi)
+            
+            state = self.game.get_next_state(state, action, player)
+            value, is_terminal = self.game.get_value_and_terminated(state, action)
+            
+            if is_terminal:
+                return_memory = []
+                for hist_neutral_state, hist_pi, hist_player in memory:
+                    hist_outcome = value if hist_player == player else self.game.get_opponent_value(value)
+                    return_memory.append((
+                        self.game.get_encoded_state(hist_neutral_state),
+                        hist_pi,
+                        hist_outcome
+                    ))
+                
+                model_outcome = value if player == 1 else self.game.get_opponent_value(value)
+                return return_memory, model_outcome, move_sources
             
             player = self.game.get_opponent(player)
     
@@ -836,9 +905,20 @@ class AlphaZeroTrainer:
                 print(f"   - Phase: {phase}")
                 sys.stdout.flush()
                 
-                # Sequential self-play (parallel had multiprocessing issues with CUDA)
+                # Sequential self-play
                 memory = []
-                game_outcomes = []  # Track final values to count draws
+                game_outcomes = []
+                
+                # Teacher-solver statistics (if enabled)
+                all_move_sources = []
+                
+                # Determine if using teacher-solver mode
+                use_teacher = self.args.get('use_teacher_solver', False) and self.teacher_solver is not None
+                
+                if use_teacher:
+                    print(f"   - Teacher-Solver mode: ENABLED")
+                    print(f"   - Solver schedule: target ≥80% usage mid/late game")
+                    sys.stdout.flush()
                 
                 # Get probabilities for current phase
                 probabilities = phase_config.get('probabilities', {})
@@ -855,7 +935,13 @@ class AlphaZeroTrainer:
                     
                     # Dispatch to appropriate game generator
                     if game_type == 'self_play':
-                        game_memory, outcome = self.self_play(temperature=temperature)
+                        if use_teacher:
+                            # Use teacher-guided self-play
+                            game_memory, outcome, move_srcs = self.self_play_teacher_guided(temperature=temperature)
+                            all_move_sources.extend(move_srcs)
+                        else:
+                            # Standard MCTS self-play
+                            game_memory, outcome = self.self_play(temperature=temperature)
                     elif game_type == 'random':
                         game_memory, outcome = self.self_play_vs_random(temperature=temperature, use_heuristic=False)
                     elif game_type == 'heuristic':
@@ -868,7 +954,11 @@ class AlphaZeroTrainer:
                         game_memory, outcome = self.tactical_trainer.generate_tactical_game(self.mcts)
                     else:
                         # Fallback to self-play
-                        game_memory, outcome = self.self_play(temperature=temperature)
+                        if use_teacher:
+                            game_memory, outcome, move_srcs = self.self_play_teacher_guided(temperature=temperature)
+                            all_move_sources.extend(move_srcs)
+                        else:
+                            game_memory, outcome = self.self_play(temperature=temperature)
                     
                     game_outcomes.append(outcome)
                     memory.extend(game_memory)
@@ -892,6 +982,27 @@ class AlphaZeroTrainer:
                 
                 print(f"✅ Generated {len(memory)} training samples from {num_games} games")
                 print(f"   Game outcomes: AI wins {num_wins} ({win_pct:.1f}%), Opponent wins {num_losses} ({loss_pct:.1f}%), Draws {num_draws} ({draw_pct:.1f}%)")
+                
+                # Log teacher-solver statistics if enabled
+                if use_teacher and self.teacher_solver is not None:
+                    teacher_stats = self.teacher_solver.get_stats()
+                    
+                    if all_move_sources:
+                        from collections import Counter
+                        source_counts = Counter(all_move_sources)
+                        total_moves = len(all_move_sources)
+                        
+                        print(f"\\n📊 Teacher-Solver Statistics:")
+                        print(f"   Solver moves: {source_counts.get('solver', 0) + source_counts.get('forced_solver', 0)} / {total_moves} ({teacher_stats.get('solver_move_fraction', 0)*100:.1f}%)")
+                        print(f"   Forced-win overrides: {source_counts.get('forced_solver', 0)} ({teacher_stats.get('forced_win_fraction', 0)*100:.1f}%)")
+                        print(f"   NN-only moves: {source_counts.get('nn', 0)} ({teacher_stats.get('nn_move_fraction', 0)*100:.1f}%)")
+                        print(f"   Solver calls: {teacher_stats.get('solver_calls', 0)}")
+                        print(f"   Solver timeout rate: {teacher_stats.get('solver_timeout_rate', 0)*100:.1f}%")
+                        print(f"   Avg solver time: {teacher_stats.get('avg_solver_time_ms', 0):.1f}ms")
+                        if hasattr(self.teacher_solver, 'solver'):
+                            solver_cache_stats = self.teacher_solver.solver.get_stats()
+                            print(f"   Solver cache hit rate: {solver_cache_stats.get('hit_rate', 0)*100:.1f}%")
+                
                 sys.stdout.flush()
                 
                 # Training
