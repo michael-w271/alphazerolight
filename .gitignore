@@ -21,3 +21,6 @@ logs/
 **/node_modules/
 dist/
 .DS_Store
+
+# AppleDouble metadata files (common on macOS/exFAT)
+._*
