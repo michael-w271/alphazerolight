@@ -53,7 +53,7 @@ Opens 2 terminal windows:
 ### Check Progress
 ```bash
 ./monitor_training.sh             # Quick snapshot
-tail -f training_log_v2.txt       # Live log
+tail -f artifacts/logs/training/training_log_v2.txt   # Live log
 ```
 
 ### Evaluate Models

@@ -1,6 +1,16 @@
 #!/bin/bash
 # Final launcher with comprehensive monitors
 
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TRAIN_SCRIPT="$REPO_ROOT/training/scripts/train_connect4.py"
+LOG_DIR="$REPO_ROOT/artifacts/logs/training"
+LOG_FILE="$LOG_DIR/training_log_v2.txt"
+
+mkdir -p "$LOG_DIR"
+cd "$REPO_ROOT"
+
 echo "🚀 Launching Connect4 Maximum Strength Training"
 echo "=============================================="
 echo ""
@@ -11,7 +21,7 @@ sleep 1
 
 # Start training
 echo "Starting training..."
-nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python training/scripts/train_connect4.py > training_log_v2.txt 2>&1 &
+nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python "$TRAIN_SCRIPT" > "$LOG_FILE" 2>&1 &
 echo "✅ Training started (PID: $!)"
 sleep 2
 
@@ -19,8 +29,8 @@ sleep 2
 echo "Opening training monitor..."
 gnome-terminal --title="🎮 Training Monitor - Full Info" \
     --geometry=140x45 \
-    --working-directory="$(pwd)" \
-    -- bash training/monitors/monitor_full.sh &
+    --working-directory="$REPO_ROOT" \
+    -- bash "$REPO_ROOT/training/monitors/monitor_full.sh" &
 
 sleep 1
 
@@ -28,8 +38,8 @@ sleep 1
 echo "Opening evaluation monitor..."
 gnome-terminal --title="🎯 Model Evaluation - Comprehensive" \
     --geometry=130x50 \
-    --working-directory="$(pwd)" \
-    -- bash training/monitors/monitor_eval.sh &
+    --working-directory="$REPO_ROOT" \
+    -- bash "$REPO_ROOT/training/monitors/monitor_eval.sh" &
 
 echo ""
 echo "✅ Monitoring launched!"

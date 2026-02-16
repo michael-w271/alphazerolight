@@ -1,6 +1,13 @@
 #!/bin/bash
 # Backup old checkpoints and start fresh training with fixed MCTS
 
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CHECKPOINT_DIR="$REPO_ROOT/checkpoints/connect4"
+LOG_DIR="$REPO_ROOT/artifacts/logs/training"
+
 echo "========================================================================"
 echo "🔧 RESTARTING TRAINING WITH FIXED MCTS"
 echo "========================================================================"
@@ -18,15 +25,16 @@ echo "  4. Start fresh training from iteration 0"
 echo ""
 read -p "Press Enter to continue or Ctrl+C to cancel..."
 
-cd "$(dirname "$0")"
+cd "$REPO_ROOT"
+mkdir -p "$LOG_DIR"
 
 # Backup old checkpoints
-BACKUP_DIR="checkpoints_terminal_bug_backup_$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR="$REPO_ROOT/checkpoints_terminal_bug_backup_$(date +%Y%m%d_%H%M%S)"
 echo ""
 echo "📦 Backing up old checkpoints..."
-if [ -d "checkpoints/connect4" ]; then
+if [ -d "$CHECKPOINT_DIR" ]; then
     mkdir -p "$BACKUP_DIR"
-    cp -r checkpoints/connect4 "$BACKUP_DIR/"
+    cp -r "$CHECKPOINT_DIR" "$BACKUP_DIR/"
     echo "✅ Backed up to $BACKUP_DIR/"
 else
     echo "⚠️  No checkpoints to backup"
@@ -35,14 +43,14 @@ fi
 # Clean checkpoints
 echo ""
 echo "🧹 Cleaning current checkpoints..."
-rm -rf checkpoints/connect4/*.pt
+rm -rf "$CHECKPOINT_DIR"/*.pt
 echo "✅ Checkpoints cleared"
 
 # Backup old logs
 echo ""
 echo "📝 Backing up training log..."
-if [ -f "training_log.txt" ]; then
-    mv training_log.txt "training_log_terminal_bug_$(date +%Y%m%d_%H%M%S).txt"
+if [ -f "$LOG_DIR/training_log_v2.txt" ]; then
+    mv "$LOG_DIR/training_log_v2.txt" "$LOG_DIR/training_log_terminal_bug_$(date +%Y%m%d_%H%M%S).txt"
     echo "✅ Log backed up"
 fi
 

@@ -161,6 +161,6 @@ class RichMonitor:
 if __name__ == "__main__":
     monitor = RichMonitor(
         checkpoint_dir='checkpoints/connect4',
-        log_file='training_log_v2.txt'
+        log_file='artifacts/logs/training/training_log_v2.txt'
     )
     monitor.run()

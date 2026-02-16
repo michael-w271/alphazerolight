@@ -78,6 +78,7 @@ alpha-zero-light/
 │       └── training/     # Training infrastructure
 │
 ├── checkpoints/           # Model checkpoints
+├── artifacts/             # Archived logs, runtime files, and results
 ├── experiments/           # Experiments and analysis
 └── paper_materials/       # Research paper materials
 ```
@@ -213,7 +214,7 @@ python play_connect4.py [--model checkpoints/connect4/model_N.pt]
 ## 📈 Progress Tracking
 
 Training progress is logged to:
-- `training_log_v2.txt` - Main training log
+- `artifacts/logs/training/training_log_v2.txt` - Main training log
 - `checkpoints/connect4/training_history.json` - Metrics history
 - Terminal monitors (launched automatically)
 

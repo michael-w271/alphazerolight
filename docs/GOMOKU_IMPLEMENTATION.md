@@ -80,7 +80,7 @@ Gomoku (五子棋) is a traditional board game where players take turns placing 
 
 ### Monitor Progress
 ```bash
-tail -f training_log.txt
+tail -f artifacts/logs/training/training_log_v2.txt
 ```
 
 ### Check Status

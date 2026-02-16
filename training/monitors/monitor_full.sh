@@ -1,7 +1,9 @@
 #!/bin/bash
 # Comprehensive training monitor with clean single-line updates
 
-LOG_FILE="../../training_log_v2.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+LOG_FILE="$REPO_ROOT/artifacts/logs/training/training_log_v2.txt"
 
 # Colors
 CYAN='\033[1;36m'

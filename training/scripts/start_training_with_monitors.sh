@@ -1,6 +1,16 @@
 #!/bin/bash
 # Launch training with terminal popups for monitoring
 
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TRAIN_SCRIPT="$REPO_ROOT/training/scripts/train_connect4.py"
+LOG_DIR="$REPO_ROOT/artifacts/logs/training"
+LOG_FILE="$LOG_DIR/training_log_v2.txt"
+
+mkdir -p "$LOG_DIR"
+cd "$REPO_ROOT"
+
 echo "🚀 Launching Connect4 Training with Terminal Monitors"
 echo "======================================================"
 
@@ -10,7 +20,7 @@ sleep 1
 
 # Start training in background
 echo "Starting training..."
-nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python training/scripts/train_connect4.py > training_log_v2.txt 2>&1 &
+nohup /mnt/ssd2pro/miniforge3/envs/tetrisrl/bin/python "$TRAIN_SCRIPT" > "$LOG_FILE" 2>&1 &
 TRAINING_PID=$!
 echo "✅ Training started (PID: $TRAINING_PID)"
 
@@ -37,7 +47,7 @@ while true; do
     # Latest log output
     echo '📋 Latest Training Output:'
     echo '------------------------------------------------------------'
-    tail -n 30 training_log_v2.txt | tail -n 25
+    tail -n 30 \"$LOG_FILE\" | tail -n 25
     echo '------------------------------------------------------------'
     echo ''
     echo 'Updated: $(date +\"%H:%M:%S\") | Press Ctrl+C to close window'

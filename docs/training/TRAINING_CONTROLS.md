@@ -19,7 +19,7 @@
 
 ### Monitor Training Live
 ```bash
-tail -f training_log.txt
+tail -f artifacts/logs/training/training_log_v2.txt
 ```
 
 ## GPU Usage While Training
@@ -33,14 +33,14 @@ tail -f training_log.txt
 
 - **Speed**: ~60 seconds per self-play game
 - **Iteration time**: ~100 minutes per iteration (100 games)
-- **Progress**: Check `training_log.txt` for live updates with emojis 🎮🧠📊
+- **Progress**: Check `artifacts/logs/training/training_log_v2.txt` for live updates with emojis 🎮🧠📊
 
 ## Files Created
 
 - `pause_training.sh` - Stop training gracefully
 - `resume_training.sh` - Start/resume training in background
 - `check_training.sh` - View current progress
-- `training_log.txt` - Live training output
+- `artifacts/logs/training/training_log_v2.txt` - Live training output
 
 ## Note
 

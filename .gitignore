@@ -21,3 +21,5 @@ logs/
 **/node_modules/
 dist/
 .DS_Store
+._*
+INTERVIEW_FIT_README.md

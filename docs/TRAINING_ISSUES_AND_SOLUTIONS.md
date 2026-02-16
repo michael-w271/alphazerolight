@@ -470,7 +470,7 @@ The final solution (progressive warmup with random → heuristic → self-play) 
 
 - Original AlphaZero Paper: [Mastering Chess and Shogi by Self-Play](https://arxiv.org/abs/1712.01815)
 - AlphaGo Zero: [Mastering the game of Go without human knowledge](https://www.nature.com/articles/nature24270)
-- Our training logs: `training_log.txt` and `checkpoints/connect4/training_history.json`
+- Our training logs: `artifacts/logs/training/training_log_v2.txt` and `checkpoints/connect4/training_history.json`
 
 ---
 

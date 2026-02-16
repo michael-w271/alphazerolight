@@ -276,12 +276,13 @@ if __name__ == '__main__':
     )
     
     # Save to file
-    output_path = "test_positions.npz"
-    save_positions_npz(positions, output_path)
+    output_path = Path("tests/fixtures/connect4/test_positions.npz")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    save_positions_npz(positions, str(output_path))
     
     # Load and verify
     print(f"\nVerifying saved data...")
-    loaded = load_positions_npz(output_path)
+    loaded = load_positions_npz(str(output_path))
     print(f"Loaded {len(loaded):,} positions")
     
     # Show sample position

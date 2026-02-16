@@ -1,6 +1,10 @@
 #!/bin/bash
 # Live training monitor with auto-refresh
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+LOG_FILE="$REPO_ROOT/artifacts/logs/training/training_log_v2.txt"
+
 echo "🎮 Connect Four Training Monitor"
 echo "================================"
 echo ""
@@ -24,8 +28,12 @@ echo ""
 
 # Show latest training progress
 echo "📈 Latest Progress:"
-tail -n 25 training_log.txt | grep -E "(Iteration|Generated|Loss|Win Rate|complete)" | tail -n 10
+if [ -f "$LOG_FILE" ]; then
+    tail -n 25 "$LOG_FILE" | grep -E "(Iteration|Generated|Loss|Win Rate|complete)" | tail -n 10
+else
+    echo "Log file not found: $LOG_FILE"
+fi
 
 echo ""
 echo "💡 Run './check_training.sh' for updates"
-echo "💡 Or: tail -f training_log.txt"
+echo "💡 Or: tail -f $LOG_FILE"
